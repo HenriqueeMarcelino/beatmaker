@@ -86,19 +86,16 @@ export const Toolbar: React.FC = () => {
       console.log('Setting instrument', instrumentType, 'on track', newTrack.id);
       setTrackInstrument(newTrack.id, instrumentType);
 
-      // Add a default pattern clip so users can see and hear the instrument
+      // Add a default single note clip for the instrument
       await addClip(
         newTrack.id,
         {
           trackId: newTrack.id,
           startTime: 0,
-          duration: 4,
+          duration: 1, // Clip duration 1 second
           offset: 0,
           notes: [
-            { id: 'note-1', pitch: 60, velocity: 0.8, startTime: 0, duration: 0.5 },
-            { id: 'note-2', pitch: 64, velocity: 0.8, startTime: 1, duration: 0.5 },
-            { id: 'note-3', pitch: 67, velocity: 0.8, startTime: 2, duration: 0.5 },
-            { id: 'note-4', pitch: 72, velocity: 0.8, startTime: 3, duration: 0.5 },
+            { id: 'note-1', pitch: 60, velocity: 0.8, startTime: 0, duration: 0.1 }, // Single short note
           ]
         }
       );

@@ -4,12 +4,20 @@ import { useStore } from '../store/useStore';
 import { getDrumInstruments } from '../engine/InstrumentLibrary';
 import AudioEngine from '../engine/AudioEngine';
 import clsx from 'clsx';
+import { Maximize2, Minimize2, X, Shuffle, Trash2 } from 'lucide-react';
 
 const STEPS = 16;
 const DRUM_INSTRUMENTS = getDrumInstruments();
 
 export const StepSequencer: React.FC = () => {
-  const { isPlaying, tempo, stepSequencerPattern, setStepSequencerPattern } = useStore();
+  const {
+    isPlaying,
+    tempo,
+    stepSequencerPattern,
+    setStepSequencerPattern,
+    isStepSequencerFullscreen,
+    toggleStepSequencerFullscreen
+  } = useStore();
   const [currentStep, setCurrentStep] = useState(0);
   const audioEngine = useRef(AudioEngine.getInstance());
   const sequenceRef = useRef<number | null>(null);
@@ -56,12 +64,14 @@ export const StepSequencer: React.FC = () => {
   };
 
   useEffect(() => {
+    // Clear any existing sequence first
+    if (sequenceRef.current !== null) {
+      Tone.Transport.clear(sequenceRef.current);
+      sequenceRef.current = null;
+    }
+
     if (!isPlaying) {
       setCurrentStep(0);
-      if (sequenceRef.current !== null) {
-        Tone.Transport.clear(sequenceRef.current);
-        sequenceRef.current = null;
-      }
       return;
     }
 
@@ -91,6 +101,150 @@ export const StepSequencer: React.FC = () => {
     };
   }, [isPlaying, pattern, tempo]);
 
+  // Fullscreen mode
+  if (isStepSequencerFullscreen) {
+    return (
+      <div className="fixed inset-0 z-50 bg-gray-900 flex flex-col">
+        {/* Fullscreen Header */}
+        <div className="bg-gray-800 border-b border-gray-700 px-6 py-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-white text-2xl font-bold">🥁 Step Sequencer</h1>
+              <p className="text-gray-400 text-sm mt-1">
+                {DRUM_INSTRUMENTS.length} instrumentos • 16 passos • {tempo} BPM
+              </p>
+            </div>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={clearPattern}
+                className="flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded transition-colors text-sm font-medium"
+              >
+                <Trash2 className="w-4 h-4" />
+                Limpar
+              </button>
+              <button
+                onClick={randomizePattern}
+                className="flex items-center gap-2 px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded transition-colors text-sm font-medium"
+              >
+                <Shuffle className="w-4 h-4" />
+                Randomizar
+              </button>
+              <button
+                onClick={toggleStepSequencerFullscreen}
+                className="flex items-center gap-2 px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded transition-colors text-sm"
+              >
+                <Minimize2 className="w-4 h-4" />
+                Sair
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Fullscreen Grid */}
+        <div className="flex-1 overflow-auto p-6">
+          <div className="max-w-7xl mx-auto">
+            <div className="bg-gray-800 rounded-lg p-6">
+              {/* Step Numbers */}
+              <div className="flex mb-3">
+                <div className="w-48" />
+                {Array.from({ length: STEPS }).map((_, i) => (
+                  <div
+                    key={i}
+                    className={clsx(
+                      'flex-1 text-center text-sm font-bold',
+                      i % 4 === 0 ? 'text-primary-400' : 'text-gray-500'
+                    )}
+                  >
+                    {i + 1}
+                  </div>
+                ))}
+              </div>
+
+              {/* Instruments Grid */}
+              <div className="space-y-2">
+                {DRUM_INSTRUMENTS.map((instrument, instrumentIndex) => (
+                  <div key={instrument.type} className="flex items-center">
+                    {/* Instrument Name */}
+                    <div className="w-48 pr-4">
+                      <button
+                        onClick={() => previewInstrument(instrumentIndex)}
+                        className="w-full text-left hover:bg-gray-700 rounded px-3 py-2 transition-colors"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div
+                            className="w-4 h-4 rounded shadow-lg"
+                            style={{ backgroundColor: instrument.color }}
+                          />
+                          <span className="text-sm text-white font-medium">
+                            {instrument.name}
+                          </span>
+                        </div>
+                      </button>
+                    </div>
+
+                    {/* Steps */}
+                    <div className="flex-1 flex gap-1.5">
+                      {Array.from({ length: STEPS }).map((_, stepIndex) => (
+                        <button
+                          key={stepIndex}
+                          onClick={() => toggleStep(instrumentIndex, stepIndex)}
+                          className={clsx(
+                            'flex-1 aspect-square rounded-lg transition-all',
+                            pattern[instrumentIndex][stepIndex]
+                              ? 'shadow-xl transform scale-95'
+                              : 'bg-gray-700 hover:bg-gray-600 hover:scale-105',
+                            currentStep === stepIndex && isPlaying
+                              ? 'ring-4 ring-white ring-offset-2 ring-offset-gray-800'
+                              : '',
+                            stepIndex % 4 === 0 && 'ml-3'
+                          )}
+                          style={{
+                            backgroundColor: pattern[instrumentIndex][stepIndex]
+                              ? instrument.color
+                              : undefined,
+                          }}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Legend */}
+            <div className="mt-6 grid grid-cols-3 gap-4">
+              <div className="bg-gray-800 rounded-lg p-4">
+                <h3 className="text-white font-semibold mb-2">🎹 Controles</h3>
+                <div className="text-sm text-gray-300 space-y-1">
+                  <p>• Clique nos quadrados para ativar/desativar</p>
+                  <p>• Clique no nome do instrumento para preview</p>
+                  <p>• Pressione SPACE para Play/Pause</p>
+                </div>
+              </div>
+              <div className="bg-gray-800 rounded-lg p-4">
+                <h3 className="text-white font-semibold mb-2">🎵 Instrumentos</h3>
+                <div className="text-sm text-gray-300 space-y-1">
+                  <p>• {DRUM_INSTRUMENTS.length} sons diferentes</p>
+                  <p>• Kicks, snares, hi-hats, cymbals</p>
+                  <p>• Percussão e sons agudos</p>
+                </div>
+              </div>
+              <div className="bg-gray-800 rounded-lg p-4">
+                <h3 className="text-white font-semibold mb-2">⚡ Dicas</h3>
+                <div className="text-sm text-gray-300 space-y-1">
+                  <p>• Use Randomizar para inspiração</p>
+                  <p>• Combine sons graves e agudos</p>
+                  <p>• Experimente padrões diferentes</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Normal mode
   return (
     <div className="flex-1 overflow-auto bg-gray-900 p-6">
       <div className="max-w-6xl mx-auto">
@@ -99,7 +253,7 @@ export const StepSequencer: React.FC = () => {
           <div>
             <h2 className="text-white text-xl font-semibold">Step Sequencer</h2>
             <p className="text-gray-400 text-sm mt-1">
-              Click on the grid to create drum patterns
+              {DRUM_INSTRUMENTS.length} instrumentos disponíveis • Clique para criar patterns
             </p>
           </div>
           <div className="flex gap-2">
@@ -115,13 +269,20 @@ export const StepSequencer: React.FC = () => {
             >
               Randomize
             </button>
+            <button
+              onClick={toggleStepSequencerFullscreen}
+              className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded transition-colors text-sm font-medium"
+            >
+              <Maximize2 className="w-4 h-4" />
+              Tela Cheia
+            </button>
           </div>
         </div>
 
-        {/* Step Grid */}
-        <div className="bg-gray-800 rounded-lg p-4">
+        {/* Step Grid - Scrollable to show all 20 instruments */}
+        <div className="bg-gray-800 rounded-lg p-4 max-h-[600px] overflow-y-auto">
           {/* Step Numbers */}
-          <div className="flex mb-2">
+          <div className="flex mb-2 sticky top-0 bg-gray-800 z-10 pb-2">
             <div className="w-40" />
             {Array.from({ length: STEPS }).map((_, i) => (
               <div
@@ -150,7 +311,7 @@ export const StepSequencer: React.FC = () => {
                       className="w-3 h-3 rounded"
                       style={{ backgroundColor: instrument.color }}
                     />
-                    <span className="text-sm text-white font-medium">
+                    <span className="text-sm text-white font-medium truncate">
                       {instrument.name}
                     </span>
                   </div>
@@ -189,15 +350,13 @@ export const StepSequencer: React.FC = () => {
         <div className="mt-4 p-4 bg-gray-800 rounded-lg">
           <div className="text-sm text-gray-300 space-y-1">
             <p>
-              <span className="text-primary-400 font-medium">Tip:</span> Click on
-              instrument names to preview sounds
+              <span className="text-primary-400 font-medium">💡 Dica:</span> Clique em "Tela Cheia" para ver todos os {DRUM_INSTRUMENTS.length} instrumentos de uma vez
             </p>
             <p>
               <span className="text-primary-400 font-medium">Tempo:</span> {tempo} BPM
             </p>
             <p>
-              <span className="text-primary-400 font-medium">Resolution:</span> 16 steps
-              (16th notes)
+              <span className="text-primary-400 font-medium">Resolução:</span> 16 steps (16th notes)
             </p>
           </div>
         </div>

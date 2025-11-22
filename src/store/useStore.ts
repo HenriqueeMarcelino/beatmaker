@@ -26,6 +26,7 @@ interface AppState {
   selectedClipId: string | null;
   snapEnabled: boolean;
   snapDivision: number; // 1, 2, 4, 8, 16, 32
+  isStepSequencerFullscreen: boolean;
 
   // Master
   masterVolume: number;
@@ -64,6 +65,7 @@ interface AppState {
   setMasterVolume: (volume: number) => void;
   setSnapEnabled: (enabled: boolean) => void;
   setSnapDivision: (division: number) => void;
+  toggleStepSequencerFullscreen: () => void;
 
   exportAudio: () => Promise<void>;
   startMicRecording: () => Promise<void>;
@@ -90,6 +92,7 @@ export const useStore = create<AppState>((set, get) => ({
   selectedClipId: null,
   snapEnabled: true,
   snapDivision: 16, // 16th notes by default
+  isStepSequencerFullscreen: false,
   masterVolume: 0.8,
 
   // Playback actions
@@ -477,6 +480,10 @@ export const useStore = create<AppState>((set, get) => ({
 
   setSnapDivision: (division: number) => {
     set({ snapDivision: division });
+  },
+
+  toggleStepSequencerFullscreen: () => {
+    set((state) => ({ isStepSequencerFullscreen: !state.isStepSequencerFullscreen }));
   },
 
   exportAudio: async () => {

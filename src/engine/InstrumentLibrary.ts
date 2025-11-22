@@ -5,13 +5,21 @@ export type InstrumentType =
   | 'snare'
   | 'hihat-closed'
   | 'hihat-open'
+  | 'hihat-pedal'
   | 'clap'
   | 'tom'
   | 'cymbal'
+  | 'crash'
+  | 'ride'
   | 'perc'
   | 'rimshot'
   | 'cowbell'
   | 'shaker'
+  | 'tambourine'
+  | 'clave'
+  | 'timbale'
+  | 'agogo'
+  | 'triangle'
   | 'bass-808'
   | 'synth-bass'
   | 'synth-lead'
@@ -194,6 +202,131 @@ const createShaker = (): Tone.MetalSynth => {
   });
 };
 
+const createHiHatPedal = (): Tone.MetalSynth => {
+  return new Tone.MetalSynth({
+    frequency: 180,
+    envelope: {
+      attack: 0.001,
+      decay: 0.04,
+      release: 0.02
+    },
+    harmonicity: 4.5,
+    modulationIndex: 25,
+    resonance: 3500,
+    octaves: 1.2,
+    volume: -14
+  });
+};
+
+const createCrash = (): Tone.MetalSynth => {
+  return new Tone.MetalSynth({
+    frequency: 300,
+    envelope: {
+      attack: 0.01,
+      decay: 2.5,
+      release: 0.8
+    },
+    harmonicity: 6,
+    modulationIndex: 80,
+    resonance: 5000,
+    octaves: 2,
+    volume: -6
+  });
+};
+
+const createRide = (): Tone.MetalSynth => {
+  return new Tone.MetalSynth({
+    frequency: 280,
+    envelope: {
+      attack: 0.001,
+      decay: 0.8,
+      release: 0.4
+    },
+    harmonicity: 5.5,
+    modulationIndex: 48,
+    resonance: 4500,
+    octaves: 1.8,
+    volume: -8
+  });
+};
+
+const createTambourine = (): Tone.MetalSynth => {
+  return new Tone.MetalSynth({
+    frequency: 500,
+    envelope: {
+      attack: 0.001,
+      decay: 0.12,
+      release: 0.08
+    },
+    harmonicity: 7,
+    modulationIndex: 35,
+    resonance: 6000,
+    octaves: 1.5,
+    volume: -10
+  });
+};
+
+const createClave = (): Tone.Synth => {
+  return new Tone.Synth({
+    oscillator: { type: 'square' },
+    envelope: {
+      attack: 0.001,
+      decay: 0.04,
+      sustain: 0,
+      release: 0.03
+    },
+    volume: -6
+  });
+};
+
+const createTimbale = (): Tone.MetalSynth => {
+  return new Tone.MetalSynth({
+    frequency: 350,
+    envelope: {
+      attack: 0.001,
+      decay: 0.25,
+      release: 0.15
+    },
+    harmonicity: 6.5,
+    modulationIndex: 45,
+    resonance: 4200,
+    octaves: 1.3,
+    volume: -7
+  });
+};
+
+const createAgogo = (): Tone.MetalSynth => {
+  return new Tone.MetalSynth({
+    frequency: 650,
+    envelope: {
+      attack: 0.001,
+      decay: 0.15,
+      release: 0.1
+    },
+    harmonicity: 8,
+    modulationIndex: 30,
+    resonance: 5500,
+    octaves: 0.8,
+    volume: -8
+  });
+};
+
+const createTriangle = (): Tone.MetalSynth => {
+  return new Tone.MetalSynth({
+    frequency: 900,
+    envelope: {
+      attack: 0.001,
+      decay: 0.6,
+      release: 0.4
+    },
+    harmonicity: 9,
+    modulationIndex: 20,
+    resonance: 7000,
+    octaves: 0.5,
+    volume: -10
+  });
+};
+
 const createBass808 = (): Tone.MembraneSynth => {
   return new Tone.MembraneSynth({
     pitchDecay: 0.08,
@@ -304,6 +437,13 @@ export const INSTRUMENT_LIBRARY: Record<InstrumentType, InstrumentConfig> = {
     category: 'drums',
     createSynth: createHiHatOpen
   },
+  'hihat-pedal': {
+    name: 'Hi-Hat Pedal',
+    type: 'hihat-pedal',
+    color: '#22d3ee',
+    category: 'drums',
+    createSynth: createHiHatPedal
+  },
   'clap': {
     name: 'Clap',
     type: 'clap',
@@ -324,6 +464,20 @@ export const INSTRUMENT_LIBRARY: Record<InstrumentType, InstrumentConfig> = {
     color: '#6366f1',
     category: 'drums',
     createSynth: createCymbal
+  },
+  'crash': {
+    name: 'Crash',
+    type: 'crash',
+    color: '#7c3aed',
+    category: 'drums',
+    createSynth: createCrash
+  },
+  'ride': {
+    name: 'Ride',
+    type: 'ride',
+    color: '#4f46e5',
+    category: 'drums',
+    createSynth: createRide
   },
   'perc': {
     name: 'Perc',
@@ -352,6 +506,41 @@ export const INSTRUMENT_LIBRARY: Record<InstrumentType, InstrumentConfig> = {
     color: '#84cc16',
     category: 'drums',
     createSynth: createShaker
+  },
+  'tambourine': {
+    name: 'Tambourine',
+    type: 'tambourine',
+    color: '#a3e635',
+    category: 'drums',
+    createSynth: createTambourine
+  },
+  'clave': {
+    name: 'Clave',
+    type: 'clave',
+    color: '#fb923c',
+    category: 'drums',
+    createSynth: createClave
+  },
+  'timbale': {
+    name: 'Timbale',
+    type: 'timbale',
+    color: '#f472b6',
+    category: 'drums',
+    createSynth: createTimbale
+  },
+  'agogo': {
+    name: 'Agogo',
+    type: 'agogo',
+    color: '#facc15',
+    category: 'drums',
+    createSynth: createAgogo
+  },
+  'triangle': {
+    name: 'Triangle',
+    type: 'triangle',
+    color: '#cbd5e1',
+    category: 'drums',
+    createSynth: createTriangle
   },
   'bass-808': {
     name: '808 Bass',
@@ -411,13 +600,21 @@ export const DRUM_NOTES: Record<InstrumentType, string> = {
   'snare': 'D1',
   'hihat-closed': 'F#1',
   'hihat-open': 'A#1',
+  'hihat-pedal': 'G#1',
   'clap': 'E1',
   'tom': 'G1',
   'cymbal': 'C2',
+  'crash': 'C#2',
+  'ride': 'D#2',
   'perc': 'D2',
   'rimshot': 'C#1',
-  'cowbell': 'D#2',
+  'cowbell': 'E2',
   'shaker': 'F1',
+  'tambourine': 'F#2',
+  'clave': 'G2',
+  'timbale': 'G#2',
+  'agogo': 'A2',
+  'triangle': 'A#2',
   'bass-808': 'C0',
   'synth-bass': 'C2',
   'synth-lead': 'C4',
