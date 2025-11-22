@@ -13,6 +13,7 @@ import {
   Square,
   Save,
   FolderOpen,
+  Magnet,
 } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import { InstrumentPicker } from './InstrumentPicker';
@@ -35,6 +36,10 @@ export const Toolbar: React.FC = () => {
     stopMicRecording,
     saveProject,
     loadProject,
+    snapEnabled,
+    snapDivision,
+    setSnapEnabled,
+    setSnapDivision,
   } = useStore();
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -277,6 +282,39 @@ export const Toolbar: React.FC = () => {
             />
             <span className="text-white w-8">{zoom.toFixed(1)}x</span>
           </div>
+
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setSnapEnabled(!snapEnabled)}
+              className={clsx(
+                'flex items-center gap-1.5 px-3 py-2 rounded transition-colors text-sm',
+                snapEnabled
+                  ? 'bg-primary-600 hover:bg-primary-700 text-white'
+                  : 'bg-gray-700 hover:bg-gray-600 text-gray-400'
+              )}
+              title="Toggle Snap to Grid"
+            >
+              <Magnet className="w-4 h-4" />
+              Snap
+            </button>
+
+            <select
+              value={snapDivision}
+              onChange={(e) => setSnapDivision(Number(e.target.value))}
+              className="px-2 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded text-sm cursor-pointer border-none outline-none"
+              disabled={!snapEnabled}
+              title="Snap Division"
+            >
+              <option value={1}>1/1</option>
+              <option value={2}>1/2</option>
+              <option value={4}>1/4</option>
+              <option value={8}>1/8</option>
+              <option value={16}>1/16</option>
+              <option value={32}>1/32</option>
+            </select>
+          </div>
+
+          <div className="w-px h-6 bg-gray-700" />
 
           <button
             onClick={exportAudio}

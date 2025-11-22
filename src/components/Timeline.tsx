@@ -1,46 +1,46 @@
-import React, { useRef, useState, useEffect } from 'react';
+import React, { useState, useRef } from 'react';
 import { useStore } from '../store/useStore';
 import { ContextMenu } from './ContextMenu';
 import Draggable from 'react-draggable';
 import clsx from 'clsx';
 
+type ResizeState = {
+  trackId: string;
+  clipId: string;
+  edge: 'left' | 'right';
+  initialX: number;
+  initialStartTime: number;
+  initialDuration: number;
+} | null;
+
 export const Timeline: React.FC = () => {
-  const { tracks, zoom, selectedClipId, setSelectedClip, updateClip, removeClip, duplicateClip, moveClipToTrack } = useStore();
+  const { tracks, zoom, selectedClipId, setSelectedClip, updateClip, removeClip, duplicateClip, moveClipToTrack, snapEnabled, snapDivision, tempo } = useStore();
   const [draggedClip, setDraggedClip] = useState<{ trackId: string; clipId: string; initialTrackIndex: number } | null>(null);
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; trackId: string; clipId: string } | null>(null);
+  const [resizeState, setResizeState] = useState<ResizeState>(null);
 
   const pixelsPerSecond = 100 * zoom;
   const trackHeight = 80;
+  const minClipDuration = 0.1; // Minimum 100ms
 
-  // Keyboard shortcuts
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (!selectedClipId) return;
+  // Calculate snap grid size in seconds
+  const getSnapGrid = () => {
+    if (!snapEnabled) return 0;
+    // Calculate beat duration in seconds
+    const beatDuration = 60 / tempo; // One quarter note
+    return beatDuration / (snapDivision / 4); // Divide by division ratio
+  };
 
-      // Find the track that contains the selected clip
-      const track = tracks.find(t => t.clips.some(c => c.id === selectedClipId));
-      if (!track) return;
-
-      // Delete key - Remove clip
-      if (e.key === 'Delete' || e.key === 'Backspace') {
-        e.preventDefault();
-        removeClip(track.id, selectedClipId);
-        setSelectedClip(null);
-      }
-
-      // Ctrl+D or Cmd+D - Duplicate clip
-      if ((e.ctrlKey || e.metaKey) && e.key === 'd') {
-        e.preventDefault();
-        duplicateClip(track.id, selectedClipId);
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [selectedClipId, tracks, removeClip, duplicateClip, setSelectedClip]);
+  // Snap a time value to the grid
+  const snapTime = (time: number) => {
+    if (!snapEnabled) return time;
+    const grid = getSnapGrid();
+    return Math.round(time / grid) * grid;
+  };
 
   const handleClipDrag = (trackId: string, clipId: string, data: { x: number; y: number }) => {
-    const newStartTime = Math.max(0, data.x / pixelsPerSecond);
+    const rawTime = Math.max(0, data.x / pixelsPerSecond);
+    const newStartTime = snapTime(rawTime);
     updateClip(trackId, clipId, { startTime: newStartTime });
   };
 
@@ -51,7 +51,8 @@ export const Timeline: React.FC = () => {
 
     // If dropped on a different track, move it
     if (newTrackId && newTrackId !== originalTrackId) {
-      const newStartTime = Math.max(0, data.x / pixelsPerSecond);
+      const rawTime = Math.max(0, data.x / pixelsPerSecond);
+      const newStartTime = snapTime(rawTime);
       moveClipToTrack(originalTrackId, newTrackId, clipId);
       updateClip(newTrackId, clipId, { startTime: newStartTime });
     }
@@ -68,6 +69,73 @@ export const Timeline: React.FC = () => {
       clipId,
     });
   };
+
+  // Resize handlers
+  const handleResizeStart = (
+    e: React.MouseEvent,
+    trackId: string,
+    clipId: string,
+    edge: 'left' | 'right'
+  ) => {
+    e.stopPropagation();
+    const track = tracks.find(t => t.id === trackId);
+    const clip = track?.clips.find(c => c.id === clipId);
+    if (!clip) return;
+
+    setResizeState({
+      trackId,
+      clipId,
+      edge,
+      initialX: e.clientX,
+      initialStartTime: clip.startTime,
+      initialDuration: clip.duration,
+    });
+
+    setSelectedClip(clipId);
+  };
+
+  const handleResizeMove = (e: MouseEvent) => {
+    if (!resizeState) return;
+
+    const deltaX = e.clientX - resizeState.initialX;
+    const deltaTime = deltaX / pixelsPerSecond;
+
+    if (resizeState.edge === 'left') {
+      // Resizing from the left edge - change startTime and duration
+      const rawStartTime = Math.max(0, resizeState.initialStartTime + deltaTime);
+      const newStartTime = snapTime(rawStartTime);
+      const actualDelta = newStartTime - resizeState.initialStartTime;
+      const newDuration = Math.max(minClipDuration, resizeState.initialDuration - actualDelta);
+
+      updateClip(resizeState.trackId, resizeState.clipId, {
+        startTime: newStartTime,
+        duration: newDuration,
+      });
+    } else {
+      // Resizing from the right edge - only change duration
+      const rawDuration = Math.max(minClipDuration, resizeState.initialDuration + deltaTime);
+      const newDuration = snapTime(rawDuration);
+      updateClip(resizeState.trackId, resizeState.clipId, {
+        duration: newDuration,
+      });
+    }
+  };
+
+  const handleResizeEnd = () => {
+    setResizeState(null);
+  };
+
+  // Add global mouse event listeners for resize
+  React.useEffect(() => {
+    if (resizeState) {
+      window.addEventListener('mousemove', handleResizeMove);
+      window.addEventListener('mouseup', handleResizeEnd);
+      return () => {
+        window.removeEventListener('mousemove', handleResizeMove);
+        window.removeEventListener('mouseup', handleResizeEnd);
+      };
+    }
+  }, [resizeState]);
 
   return (
     <div className="flex-1 overflow-auto bg-gray-900">
@@ -124,11 +192,12 @@ export const Timeline: React.FC = () => {
                   onDrag={(e, data) => handleClipDrag(track.id, clip.id, data)}
                   onStart={() => setDraggedClip({ trackId: track.id, clipId: clip.id, initialTrackIndex: trackIndex })}
                   onStop={(e, data) => handleClipDragStop(track.id, clip.id, data, trackIndex)}
-                  grid={[pixelsPerSecond / 16, trackHeight]}
+                  disabled={!!resizeState}
                 >
                   <div
                     className={clsx(
-                      'absolute top-2 h-16 rounded cursor-move transition-all',
+                      'absolute top-2 h-16 rounded transition-all group',
+                      resizeState ? 'cursor-default' : 'cursor-move',
                       selectedClipId === clip.id
                         ? 'ring-2 ring-primary-500'
                         : 'hover:ring-2 hover:ring-primary-400'
@@ -141,9 +210,23 @@ export const Timeline: React.FC = () => {
                     onClick={() => setSelectedClip(clip.id)}
                     onContextMenu={(e) => handleContextMenu(e, track.id, clip.id)}
                   >
-                    <div className="px-2 py-1 text-xs text-white truncate">
+                    <div className="px-2 py-1 text-xs text-white truncate pointer-events-none">
                       Clip {clip.id.slice(-4)}
                     </div>
+
+                    {/* Left Resize Handle */}
+                    <div
+                      className="absolute left-0 top-0 w-2 h-full cursor-ew-resize hover:bg-white hover:bg-opacity-30 transition-colors z-10"
+                      onMouseDown={(e) => handleResizeStart(e, track.id, clip.id, 'left')}
+                      title="Resize left edge"
+                    />
+
+                    {/* Right Resize Handle */}
+                    <div
+                      className="absolute right-0 top-0 w-2 h-full cursor-ew-resize hover:bg-white hover:bg-opacity-30 transition-colors z-10"
+                      onMouseDown={(e) => handleResizeStart(e, track.id, clip.id, 'right')}
+                      title="Resize right edge"
+                    />
                   </div>
                 </Draggable>
               ))}

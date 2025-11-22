@@ -7,9 +7,11 @@ import { StepSequencer } from './components/StepSequencer';
 import { TrackMixer } from './components/TrackMixer';
 import { EffectsPanel } from './components/EffectsPanel';
 import { useStore } from './store/useStore';
+import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
 
 function App() {
   const { viewMode } = useStore();
+  useKeyboardShortcuts();
 
   return (
     <div className="h-screen flex flex-col bg-gray-900 text-white">

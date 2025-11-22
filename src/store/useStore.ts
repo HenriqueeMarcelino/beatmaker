@@ -24,6 +24,8 @@ interface AppState {
   zoom: number;
   viewMode: 'timeline' | 'piano-roll' | 'step-sequencer';
   selectedClipId: string | null;
+  snapEnabled: boolean;
+  snapDivision: number; // 1, 2, 4, 8, 16, 32
 
   // Master
   masterVolume: number;
@@ -49,6 +51,10 @@ interface AppState {
   moveClipToTrack: (fromTrackId: string, toTrackId: string, clipId: string) => void;
   setSelectedClip: (clipId: string | null) => void;
 
+  addNote: (clipId: string, note: Omit<import('../engine/AudioEngine').Note, 'id'>) => void;
+  removeNote: (clipId: string, noteId: string) => void;
+  updateNote: (clipId: string, noteId: string, updates: Partial<import('../engine/AudioEngine').Note>) => void;
+
   addEffect: (trackId: string, effect: Omit<Effect, 'id' | 'node'>) => void;
   removeEffect: (trackId: string, effectId: string) => void;
   updateEffect: (trackId: string, effectId: string, updates: Partial<Effect>) => void;
@@ -56,6 +62,8 @@ interface AppState {
   setZoom: (zoom: number) => void;
   setViewMode: (mode: 'timeline' | 'piano-roll' | 'step-sequencer') => void;
   setMasterVolume: (volume: number) => void;
+  setSnapEnabled: (enabled: boolean) => void;
+  setSnapDivision: (division: number) => void;
 
   exportAudio: () => Promise<void>;
   startMicRecording: () => Promise<void>;
@@ -80,6 +88,8 @@ export const useStore = create<AppState>((set, get) => ({
   zoom: 1,
   viewMode: 'timeline',
   selectedClipId: null,
+  snapEnabled: true,
+  snapDivision: 16, // 16th notes by default
   masterVolume: 0.8,
 
   // Playback actions
@@ -312,6 +322,86 @@ export const useStore = create<AppState>((set, get) => ({
     }));
   },
 
+  // Note actions
+  addNote: (clipId: string, noteData) => {
+    const note: import('../engine/AudioEngine').Note = {
+      ...noteData,
+      id: generateId('note'),
+    };
+
+    set((state) => ({
+      tracks: state.tracks.map((track) => ({
+        ...track,
+        clips: track.clips.map((clip) =>
+          clip.id === clipId
+            ? { ...clip, notes: [...(clip.notes || []), note] }
+            : clip
+        ),
+      })),
+    }));
+
+    // Update AudioEngine for instrument clips
+    const state = get();
+    const track = state.tracks.find(t => t.clips.some(c => c.id === clipId));
+    if (track) {
+      const clip = track.clips.find(c => c.id === clipId);
+      if (clip) {
+        audioEngine.addInstrumentClip(track.id, clip);
+      }
+    }
+  },
+
+  removeNote: (clipId: string, noteId: string) => {
+    set((state) => ({
+      tracks: state.tracks.map((track) => ({
+        ...track,
+        clips: track.clips.map((clip) =>
+          clip.id === clipId
+            ? { ...clip, notes: (clip.notes || []).filter(n => n.id !== noteId) }
+            : clip
+        ),
+      })),
+    }));
+
+    // Update AudioEngine for instrument clips
+    const state = get();
+    const track = state.tracks.find(t => t.clips.some(c => c.id === clipId));
+    if (track) {
+      const clip = track.clips.find(c => c.id === clipId);
+      if (clip) {
+        audioEngine.addInstrumentClip(track.id, clip);
+      }
+    }
+  },
+
+  updateNote: (clipId: string, noteId: string, updates) => {
+    set((state) => ({
+      tracks: state.tracks.map((track) => ({
+        ...track,
+        clips: track.clips.map((clip) =>
+          clip.id === clipId
+            ? {
+                ...clip,
+                notes: (clip.notes || []).map(n =>
+                  n.id === noteId ? { ...n, ...updates } : n
+                ),
+              }
+            : clip
+        ),
+      })),
+    }));
+
+    // Update AudioEngine for instrument clips
+    const state = get();
+    const track = state.tracks.find(t => t.clips.some(c => c.id === clipId));
+    if (track) {
+      const clip = track.clips.find(c => c.id === clipId);
+      if (clip) {
+        audioEngine.addInstrumentClip(track.id, clip);
+      }
+    }
+  },
+
   // Effect actions
   addEffect: (trackId: string, effectData) => {
     const effect: Effect = {
@@ -379,6 +469,14 @@ export const useStore = create<AppState>((set, get) => ({
   setMasterVolume: (volume: number) => {
     audioEngine.setMasterVolume(volume);
     set({ masterVolume: volume });
+  },
+
+  setSnapEnabled: (enabled: boolean) => {
+    set({ snapEnabled: enabled });
+  },
+
+  setSnapDivision: (division: number) => {
+    set({ snapDivision: division });
   },
 
   exportAudio: async () => {
