@@ -182,6 +182,9 @@ export const useStore = create<AppState>((set, get) => ({
       // Update clip duration to match actual audio file duration
       clip.duration = buffer.duration;
       await audioEngine.addAudioClip(trackId, clip, buffer);
+    } else if (clip.notes && clip.notes.length > 0) {
+      // Instrument clip with MIDI notes
+      audioEngine.addInstrumentClip(trackId, clip);
     }
 
     set((state) => ({

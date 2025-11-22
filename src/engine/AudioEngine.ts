@@ -102,6 +102,13 @@ class AudioEngine {
 
         // Handle instrument clips with notes
         if (clip.notes && clip.notes.length > 0 && track.instrument) {
+          console.log('🎵 Scheduling instrument clip:', {
+            trackId: track.id,
+            clipId: clip.id,
+            notesCount: clip.notes.length,
+            hasInstrument: !!track.instrument
+          });
+
           // Create events array for Tone.Part
           const events = clip.notes.map(note => ({
             time: clip.startTime + note.startTime,
@@ -110,8 +117,11 @@ class AudioEngine {
             velocity: note.velocity
           }));
 
+          console.log('📝 Events:', events);
+
           // Create a Part that loops with Transport
           const part = new Tone.Part((time, event) => {
+            console.log('🔊 Playing note:', event.note, 'at', time);
             if (track.instrument && typeof track.instrument.triggerAttackRelease === 'function') {
               track.instrument.triggerAttackRelease(event.note, event.duration, time, event.velocity);
             }
@@ -122,6 +132,7 @@ class AudioEngine {
           part.start(0);
 
           this.activeParts.push(part);
+          console.log('✅ Part created and started');
         }
       });
     });
@@ -293,6 +304,20 @@ class AudioEngine {
 
     clip.player = player;
     clip.buffer = buffer;
+
+    track.clips.push(clip);
+  }
+
+  addInstrumentClip(trackId: string, clip: Clip): void {
+    const track = this.tracks.get(trackId);
+    if (!track) return;
+
+    console.log('➕ Adding instrument clip to AudioEngine:', {
+      trackId,
+      clipId: clip.id,
+      hasNotes: !!clip.notes,
+      notesCount: clip.notes?.length || 0
+    });
 
     track.clips.push(clip);
   }
