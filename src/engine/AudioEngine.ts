@@ -59,10 +59,13 @@ class AudioEngine {
   private isRecordingMic: boolean = false;
 
   private constructor() {
+    // Add a limiter/compressor to prevent distortion when many sounds play together
+    const limiter = new Tone.Limiter(-3).toDestination();
+
     this.masterChannel = new Tone.Channel({
       volume: 0,
       pan: 0
-    }).toDestination();
+    }).connect(limiter);
   }
 
   static getInstance(): AudioEngine {
@@ -622,10 +625,8 @@ class AudioEngine {
     }
   }
 
-  async playInstrumentPreview(instrumentType: InstrumentType): Promise<void> {
-    // Ensure audio context is started
-    await Tone.start();
-
+  playInstrumentPreview(instrumentType: InstrumentType): void {
+    // Create synth if it doesn't exist yet (lazy initialization)
     if (!this.previewSynths.has(instrumentType)) {
       const synth = createInstrument(instrumentType);
       synth.toDestination();
@@ -640,7 +641,8 @@ class AudioEngine {
 
     // Use duck typing to check if the synth has triggerAttackRelease
     if (synth && typeof synth.triggerAttackRelease === 'function') {
-      synth.triggerAttackRelease(note, '8n', now, 0.8);
+      // Reduced velocity from 0.8 to 0.6 to prevent distortion when many play together
+      synth.triggerAttackRelease(note, '8n', now, 0.6);
     }
   }
 

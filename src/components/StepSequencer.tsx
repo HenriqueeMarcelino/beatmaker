@@ -147,36 +147,20 @@ export const StepSequencer: React.FC = () => {
       // Throttle UI updates using requestAnimationFrame
       scheduleUIUpdate(step);
 
-      // Count active instruments on this step
-      const activeInstruments: number[] = [];
+      // Play all active instruments on this step
       currentPattern.forEach((instrumentPattern, instrumentIndex) => {
         if (instrumentPattern && instrumentPattern[step]) {
-          activeInstruments.push(instrumentIndex);
+          const instrument = DRUM_INSTRUMENTS[instrumentIndex];
+          if (instrument) {
+            audioEngine.current.playInstrumentPreview(instrument.type);
+          }
         }
       });
-
-      // Limit max simultaneous voices to prevent performance issues
-      // Reduced from 8 to 5 for better performance
-      const MAX_VOICES = 5;
-      const voicesToPlay = activeInstruments.slice(0, MAX_VOICES);
-
-      // Play instruments
-      voicesToPlay.forEach((instrumentIndex) => {
-        const instrument = DRUM_INSTRUMENTS[instrumentIndex];
-        if (instrument) {
-          audioEngine.current.playInstrumentPreview(instrument.type);
-        }
-      });
-
-      // Only warn occasionally to avoid console spam
-      if (activeInstruments.length > MAX_VOICES && step % 8 === 0) {
-        console.warn(`⚠️ Too many voices (${activeInstruments.length}), limiting to ${MAX_VOICES}`);
-      }
 
       step = (step + 1) % STEPS;
     }, stepDuration);
 
-    console.log('🎵 Step Sequencer: Scheduler created (MAX_VOICES=5, RAF throttling enabled)');
+    console.log('🎵 Step Sequencer: Scheduler created (unlimited voices, RAF throttling, limiter enabled)');
 
     return () => {
       console.log('🧹 Step Sequencer: Cleaning up scheduler');
