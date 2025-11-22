@@ -5,11 +5,12 @@ import Draggable from 'react-draggable';
 import clsx from 'clsx';
 
 export const Timeline: React.FC = () => {
-  const { tracks, zoom, selectedClipId, setSelectedClip, updateClip, removeClip, duplicateClip } = useStore();
-  const [draggedClip, setDraggedClip] = useState<{ trackId: string; clipId: string } | null>(null);
+  const { tracks, zoom, selectedClipId, setSelectedClip, updateClip, removeClip, duplicateClip, moveClipToTrack } = useStore();
+  const [draggedClip, setDraggedClip] = useState<{ trackId: string; clipId: string; initialTrackIndex: number } | null>(null);
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; trackId: string; clipId: string } | null>(null);
 
   const pixelsPerSecond = 100 * zoom;
+  const trackHeight = 80;
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -43,6 +44,21 @@ export const Timeline: React.FC = () => {
     updateClip(trackId, clipId, { startTime: newStartTime });
   };
 
+  const handleClipDragStop = (originalTrackId: string, clipId: string, data: { x: number; y: number }, initialTrackIndex: number) => {
+    // Calculate which track the clip was dropped on based on y position
+    const trackIndex = Math.max(0, Math.min(tracks.length - 1, initialTrackIndex + Math.round(data.y / trackHeight)));
+    const newTrackId = tracks[trackIndex]?.id;
+
+    // If dropped on a different track, move it
+    if (newTrackId && newTrackId !== originalTrackId) {
+      const newStartTime = Math.max(0, data.x / pixelsPerSecond);
+      moveClipToTrack(originalTrackId, newTrackId, clipId);
+      updateClip(newTrackId, clipId, { startTime: newStartTime });
+    }
+
+    setDraggedClip(null);
+  };
+
   const handleContextMenu = (e: React.MouseEvent, trackId: string, clipId: string) => {
     e.preventDefault();
     setContextMenu({
@@ -57,12 +73,15 @@ export const Timeline: React.FC = () => {
     <div className="flex-1 overflow-auto bg-gray-900">
       {/* Timeline Ruler */}
       <div className="sticky top-0 z-10 bg-gray-800 border-b border-gray-700">
-        <div className="h-8 flex items-center px-4">
+        <div className="h-8 flex items-center relative ml-48">
           {Array.from({ length: 100 }).map((_, i) => (
             <div
               key={i}
-              className="text-xs text-gray-400"
-              style={{ width: `${pixelsPerSecond}px` }}
+              className="text-xs text-gray-400 border-l border-gray-700 pl-1 flex-shrink-0"
+              style={{
+                width: `${pixelsPerSecond}px`,
+                minWidth: `${pixelsPerSecond}px`
+              }}
             >
               {i}s
             </div>
@@ -101,12 +120,11 @@ export const Timeline: React.FC = () => {
               {track.clips.map((clip) => (
                 <Draggable
                   key={clip.id}
-                  axis="x"
                   position={{ x: clip.startTime * pixelsPerSecond, y: 0 }}
                   onDrag={(e, data) => handleClipDrag(track.id, clip.id, data)}
-                  onStart={() => setDraggedClip({ trackId: track.id, clipId: clip.id })}
-                  onStop={() => setDraggedClip(null)}
-                  grid={[pixelsPerSecond / 16, 1]}
+                  onStart={() => setDraggedClip({ trackId: track.id, clipId: clip.id, initialTrackIndex: trackIndex })}
+                  onStop={(e, data) => handleClipDragStop(track.id, clip.id, data, trackIndex)}
+                  grid={[pixelsPerSecond / 16, trackHeight]}
                 >
                   <div
                     className={clsx(

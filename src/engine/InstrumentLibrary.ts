@@ -42,16 +42,19 @@ const createKick = (): Tone.MembraneSynth => {
   });
 };
 
-const createSnare = (): Tone.NoiseSynth => {
-  return new Tone.NoiseSynth({
-    noise: { type: 'white' },
+const createSnare = (): Tone.MetalSynth => {
+  return new Tone.MetalSynth({
+    frequency: 100,
     envelope: {
       attack: 0.001,
-      decay: 0.15,
-      sustain: 0,
+      decay: 0.2,
       release: 0.15
     },
-    volume: -8 // Aumenta o volume
+    harmonicity: 3.5,
+    modulationIndex: 40,
+    resonance: 3000,
+    octaves: 1.5,
+    volume: -8
   });
 };
 
@@ -86,16 +89,19 @@ const createHiHatOpen = (): Tone.MetalSynth => {
   });
 };
 
-const createClap = (): Tone.NoiseSynth => {
-  return new Tone.NoiseSynth({
-    noise: { type: 'white' },
+const createClap = (): Tone.MetalSynth => {
+  return new Tone.MetalSynth({
+    frequency: 150,
     envelope: {
       attack: 0.001,
-      decay: 0.12,
-      sustain: 0,
-      release: 0.12
+      decay: 0.15,
+      release: 0.1
     },
-    volume: -6 // Aumenta o volume
+    harmonicity: 4,
+    modulationIndex: 30,
+    resonance: 2500,
+    octaves: 1.2,
+    volume: -6
   });
 };
 
@@ -172,15 +178,18 @@ const createCowbell = (): Tone.MetalSynth => {
   });
 };
 
-const createShaker = (): Tone.NoiseSynth => {
-  return new Tone.NoiseSynth({
-    noise: { type: 'white' },
+const createShaker = (): Tone.MetalSynth => {
+  return new Tone.MetalSynth({
+    frequency: 400,
     envelope: {
       attack: 0.001,
-      decay: 0.05,
-      sustain: 0,
-      release: 0.05
+      decay: 0.06,
+      release: 0.04
     },
+    harmonicity: 6,
+    modulationIndex: 20,
+    resonance: 5000,
+    octaves: 1,
     volume: -12
   });
 };

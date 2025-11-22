@@ -171,6 +171,8 @@ export const useStore = create<AppState>((set, get) => ({
 
     if (file) {
       const buffer = await audioEngine.loadAudioFile(file);
+      // Update clip duration to match actual audio file duration
+      clip.duration = buffer.duration;
       await audioEngine.addAudioClip(trackId, clip, buffer);
     }
 

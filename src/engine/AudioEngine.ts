@@ -80,10 +80,25 @@ class AudioEngine {
     // Schedule all clips
     this.tracks.forEach(track => {
       track.clips.forEach(clip => {
+        // Handle audio clips
         if (clip.player && clip.buffer) {
-          // Stop and restart the player
           clip.player.stop();
           clip.player.start(clip.startTime, clip.offset, clip.duration);
+        }
+
+        // Handle instrument clips with notes
+        if (clip.notes && clip.notes.length > 0 && track.instrument) {
+          clip.notes.forEach(note => {
+            const noteTime = clip.startTime + note.startTime;
+            const noteName = Tone.Frequency(note.pitch, 'midi').toNote();
+
+            // Schedule note using Tone.Transport
+            Tone.Transport.schedule((time) => {
+              if (track.instrument && typeof track.instrument.triggerAttackRelease === 'function') {
+                track.instrument.triggerAttackRelease(noteName, note.duration, time, note.velocity);
+              }
+            }, noteTime);
+          });
         }
       });
     });
@@ -103,6 +118,7 @@ class AudioEngine {
 
   stop(): void {
     Tone.Transport.stop();
+    Tone.Transport.cancel(); // Clear all scheduled events
   }
 
   setLoop(enabled: boolean, loopStart: number = 0, loopEnd: number = 8): void {
@@ -464,17 +480,9 @@ class AudioEngine {
     const note = DRUM_NOTES[instrumentType] || 'C4';
     const now = Tone.now();
 
-    // NoiseSynth doesn't accept note parameter, just duration
-    if (synth.constructor.name === 'NoiseSynth') {
-      if (typeof (synth as any).triggerAttackRelease === 'function') {
-        // NoiseSynth.triggerAttackRelease(duration, time) - time is optional
-        (synth as any).triggerAttackRelease('8n');
-      }
-    } else {
-      // Use duck typing for other synths
-      if (synth && typeof synth.triggerAttackRelease === 'function') {
-        synth.triggerAttackRelease(note, '8n', now, 0.8);
-      }
+    // Use duck typing to check if the synth has triggerAttackRelease
+    if (synth && typeof synth.triggerAttackRelease === 'function') {
+      synth.triggerAttackRelease(note, '8n', now, 0.8);
     }
   }
 
