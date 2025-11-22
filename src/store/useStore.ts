@@ -60,6 +60,9 @@ interface AppState {
   exportAudio: () => Promise<void>;
   startMicRecording: () => Promise<void>;
   stopMicRecording: () => Promise<void>;
+
+  saveProject: () => void;
+  loadProject: (file: File) => Promise<void>;
 }
 
 const audioEngine = AudioEngine.getInstance();
@@ -450,6 +453,154 @@ export const useStore = create<AppState>((set, get) => ({
     } catch (error) {
       console.error('Error stopping mic recording:', error);
       set({ isRecordingMic: false });
+    }
+  },
+
+  saveProject: () => {
+    const state = get();
+
+    // Serialize project data
+    const projectData = {
+      version: '1.0.0',
+      name: `Project-${Date.now()}`,
+      tempo: state.tempo,
+      loopEnabled: state.loopEnabled,
+      zoom: state.zoom,
+      masterVolume: state.masterVolume,
+      stepSequencerPattern: state.stepSequencerPattern,
+      tracks: state.tracks.map(track => ({
+        id: track.id,
+        name: track.name,
+        type: track.type,
+        volume: track.volume,
+        pan: track.pan,
+        muted: track.muted,
+        solo: track.solo,
+        color: track.color,
+        instrumentType: track.instrumentType,
+        clips: track.clips.map(clip => ({
+          id: clip.id,
+          trackId: clip.trackId,
+          startTime: clip.startTime,
+          duration: clip.duration,
+          offset: clip.offset,
+          notes: clip.notes,
+          // Note: Audio buffers are not saved, users need to re-import files
+        })),
+        effects: track.effects.map(effect => ({
+          id: effect.id,
+          type: effect.type,
+          enabled: effect.enabled,
+          params: effect.params,
+        })),
+      })),
+    };
+
+    // Download as JSON
+    const json = JSON.stringify(projectData, null, 2);
+    const blob = new Blob([json], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${projectData.name}.bmp`;
+    a.click();
+    URL.revokeObjectURL(url);
+
+    console.log('💾 Project saved:', projectData.name);
+  },
+
+  loadProject: async (file: File) => {
+    try {
+      const text = await file.text();
+      const projectData = JSON.parse(text);
+
+      console.log('📂 Loading project:', projectData);
+
+      // Clear current project
+      const state = get();
+      state.tracks.forEach(track => {
+        audioEngine.removeTrack(track.id);
+      });
+
+      // Restore state
+      set({
+        tempo: projectData.tempo || 120,
+        loopEnabled: projectData.loopEnabled !== undefined ? projectData.loopEnabled : true,
+        zoom: projectData.zoom || 1,
+        masterVolume: projectData.masterVolume || 0.8,
+        stepSequencerPattern: projectData.stepSequencerPattern || [],
+        tracks: [],
+      });
+
+      // Set tempo in audio engine
+      audioEngine.setTempo(projectData.tempo || 120);
+      audioEngine.setMasterVolume(projectData.masterVolume || 0.8);
+
+      // Restore tracks
+      for (const trackData of projectData.tracks) {
+        // Add track
+        const track: Track = {
+          id: trackData.id,
+          name: trackData.name,
+          type: trackData.type,
+          volume: trackData.volume,
+          pan: trackData.pan,
+          muted: trackData.muted,
+          solo: trackData.solo,
+          color: trackData.color,
+          clips: [],
+          effects: [],
+        };
+
+        audioEngine.addTrack(track);
+
+        // Set instrument if it's an instrument track
+        if (trackData.instrumentType) {
+          audioEngine.setTrackInstrument(track.id, trackData.instrumentType);
+          track.instrumentType = trackData.instrumentType;
+        }
+
+        // Restore clips (except audio clips which need re-import)
+        for (const clipData of trackData.clips) {
+          if (clipData.notes && clipData.notes.length > 0) {
+            // Instrument clip
+            const clip: Clip = {
+              id: clipData.id,
+              trackId: clipData.trackId,
+              startTime: clipData.startTime,
+              duration: clipData.duration,
+              offset: clipData.offset,
+              notes: clipData.notes,
+            };
+            track.clips.push(clip);
+            audioEngine.addInstrumentClip(track.id, clip);
+          }
+        }
+
+        // Restore effects
+        for (const effectData of trackData.effects) {
+          const effect: Effect = {
+            id: effectData.id,
+            type: effectData.type,
+            enabled: effectData.enabled,
+            params: effectData.params,
+          };
+          const node = audioEngine.createEffect(effect.type, effect.params);
+          effect.node = node;
+          track.effects.push(effect);
+          audioEngine.addEffect(track.id, effect);
+        }
+
+        set((state) => ({
+          tracks: [...state.tracks, track],
+        }));
+      }
+
+      console.log('✅ Project loaded successfully');
+      alert(`Projeto carregado! ${projectData.tracks.length} tracks restauradas.\n\nNota: Clips de áudio precisam ser re-importados manualmente.`);
+    } catch (error) {
+      console.error('Error loading project:', error);
+      alert('Erro ao carregar projeto. Arquivo inválido?');
     }
   },
 }));

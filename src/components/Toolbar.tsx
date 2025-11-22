@@ -11,6 +11,8 @@ import {
   Zap,
   Mic,
   Square,
+  Save,
+  FolderOpen,
 } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import { InstrumentPicker } from './InstrumentPicker';
@@ -31,9 +33,12 @@ export const Toolbar: React.FC = () => {
     isRecordingMic,
     startMicRecording,
     stopMicRecording,
+    saveProject,
+    loadProject,
   } = useStore();
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const projectInputRef = useRef<HTMLInputElement>(null);
   const [showInstrumentPicker, setShowInstrumentPicker] = useState(false);
 
   const handleAddAudioTrack = () => {
@@ -137,6 +142,18 @@ export const Toolbar: React.FC = () => {
       await stopMicRecording();
     } else {
       await startMicRecording();
+    }
+  };
+
+  const handleLoadProject = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    await loadProject(file);
+
+    // Reset input
+    if (projectInputRef.current) {
+      projectInputRef.current.value = '';
     }
   };
 
@@ -268,6 +285,32 @@ export const Toolbar: React.FC = () => {
             <Download className="w-4 h-4" />
             Export
           </button>
+
+          <div className="w-px h-6 bg-gray-700" />
+
+          <button
+            onClick={saveProject}
+            className="flex items-center gap-2 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded transition-colors text-sm"
+          >
+            <Save className="w-4 h-4" />
+            Save
+          </button>
+
+          <button
+            onClick={() => projectInputRef.current?.click()}
+            className="flex items-center gap-2 px-3 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded transition-colors text-sm"
+          >
+            <FolderOpen className="w-4 h-4" />
+            Load
+          </button>
+
+          <input
+            ref={projectInputRef}
+            type="file"
+            accept=".bmp,application/json"
+            onChange={handleLoadProject}
+            className="hidden"
+          />
 
           <button className="p-2 bg-gray-700 hover:bg-gray-600 text-white rounded transition-colors">
             <Settings className="w-4 h-4" />
