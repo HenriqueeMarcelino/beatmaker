@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import AudioEngine, { Track, Clip, Effect } from '../engine/AudioEngine';
+import { InstrumentType } from '../engine/InstrumentLibrary';
 
 interface AppState {
   // Playback
@@ -30,6 +31,7 @@ interface AppState {
   removeTrack: (trackId: string) => void;
   updateTrack: (trackId: string, updates: Partial<Track>) => void;
   setSelectedTrack: (trackId: string | null) => void;
+  setTrackInstrument: (trackId: string, instrumentType: InstrumentType) => void;
 
   addClip: (trackId: string, clip: Omit<Clip, 'id'>, file?: File) => Promise<void>;
   removeClip: (trackId: string, clipId: string) => void;
@@ -134,6 +136,17 @@ export const useStore = create<AppState>((set, get) => ({
 
   setSelectedTrack: (trackId: string | null) => {
     set({ selectedTrackId: trackId });
+  },
+
+  setTrackInstrument: (trackId: string, instrumentType: InstrumentType) => {
+    audioEngine.setTrackInstrument(trackId, instrumentType);
+    set((state) => ({
+      tracks: state.tracks.map((t) =>
+        t.id === trackId
+          ? { ...t, instrumentType }
+          : t
+      ),
+    }));
   },
 
   // Clip actions

@@ -1,4 +1,5 @@
 import * as Tone from 'tone';
+import { InstrumentType, createInstrument, DRUM_NOTES } from './InstrumentLibrary';
 
 export interface Track {
   id: string;
@@ -12,6 +13,8 @@ export interface Track {
   clips: Clip[];
   effects: Effect[];
   channel?: Tone.Channel;
+  instrument?: Tone.Instrument;
+  instrumentType?: InstrumentType;
 }
 
 export interface Clip {
@@ -47,6 +50,7 @@ class AudioEngine {
   private tracks: Map<string, Track> = new Map();
   private masterChannel: Tone.Channel;
   private recorder?: Tone.Recorder;
+  private previewSynths: Map<InstrumentType, Tone.Instrument> = new Map();
 
   private constructor() {
     this.masterChannel = new Tone.Channel({
@@ -380,6 +384,74 @@ class AudioEngine {
       });
     });
     return maxDuration;
+  }
+
+  // Instrument methods
+  setTrackInstrument(trackId: string, instrumentType: InstrumentType): void {
+    const track = this.tracks.get(trackId);
+    if (!track?.channel) return;
+
+    // Dispose old instrument
+    if (track.instrument) {
+      track.instrument.dispose();
+    }
+
+    // Create new instrument
+    const instrument = createInstrument(instrumentType);
+    instrument.connect(track.channel);
+
+    track.instrument = instrument;
+    track.instrumentType = instrumentType;
+  }
+
+  playNote(trackId: string, note: string, duration: string = '8n', velocity: number = 1): void {
+    const track = this.tracks.get(trackId);
+    if (!track?.instrument) return;
+
+    const now = Tone.now();
+
+    if (track.instrument instanceof Tone.PolySynth) {
+      track.instrument.triggerAttackRelease(note, duration, now, velocity);
+    } else if (track.instrument instanceof Tone.Instrument) {
+      track.instrument.triggerAttackRelease(note, duration, now, velocity);
+    }
+  }
+
+  playInstrumentPreview(instrumentType: InstrumentType): void {
+    if (!this.previewSynths.has(instrumentType)) {
+      const synth = createInstrument(instrumentType);
+      synth.toDestination();
+      this.previewSynths.set(instrumentType, synth);
+    }
+
+    const synth = this.previewSynths.get(instrumentType);
+    if (!synth) return;
+
+    const note = DRUM_NOTES[instrumentType] || 'C4';
+    const now = Tone.now();
+
+    if (synth instanceof Tone.PolySynth) {
+      synth.triggerAttackRelease(note, '8n', now, 0.8);
+    } else if (synth instanceof Tone.Instrument) {
+      synth.triggerAttackRelease(note, '8n', now, 0.8);
+    }
+  }
+
+  scheduleNote(
+    trackId: string,
+    note: string,
+    time: number,
+    duration: number,
+    velocity: number = 1
+  ): void {
+    const track = this.tracks.get(trackId);
+    if (!track?.instrument) return;
+
+    if (track.instrument instanceof Tone.PolySynth) {
+      track.instrument.triggerAttackRelease(note, duration, time, velocity);
+    } else if (track.instrument instanceof Tone.Instrument) {
+      track.instrument.triggerAttackRelease(note, duration, time, velocity);
+    }
   }
 
   dispose(): void {

@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState } from 'react';
 import {
   Plus,
   Upload,
@@ -11,6 +11,8 @@ import {
   Zap,
 } from 'lucide-react';
 import { useStore } from '../store/useStore';
+import { InstrumentPicker } from './InstrumentPicker';
+import { InstrumentType } from '../engine/InstrumentLibrary';
 import clsx from 'clsx';
 
 export const Toolbar: React.FC = () => {
@@ -23,9 +25,11 @@ export const Toolbar: React.FC = () => {
     exportAudio,
     zoom,
     setZoom,
+    setTrackInstrument,
   } = useStore();
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [showInstrumentPicker, setShowInstrumentPicker] = useState(false);
 
   const handleAddAudioTrack = () => {
     const colors = ['#ef4444', '#f59e0b', '#10b981', '#3b82f6', '#8b5cf6', '#ec4899'];
@@ -41,7 +45,13 @@ export const Toolbar: React.FC = () => {
   };
 
   const handleAddInstrumentTrack = () => {
+    setShowInstrumentPicker(true);
+  };
+
+  const handleInstrumentSelect = (instrumentType: InstrumentType) => {
     const colors = ['#ef4444', '#f59e0b', '#10b981', '#3b82f6', '#8b5cf6', '#ec4899'];
+    const trackId = `track-${Date.now()}-${Math.random()}`;
+
     addTrack({
       name: `Instrument ${tracks.length + 1}`,
       type: 'instrument',
@@ -51,6 +61,17 @@ export const Toolbar: React.FC = () => {
       solo: false,
       color: colors[tracks.length % colors.length],
     });
+
+    // Set instrument on the track we just created
+    // We use the generated trackId from zustand's internal logic
+    // by waiting and checking the last added track
+    setTimeout(() => {
+      const allTracks = useStore.getState().tracks;
+      if (allTracks.length > 0) {
+        const newTrack = allTracks[allTracks.length - 1];
+        setTrackInstrument(newTrack.id, instrumentType);
+      }
+    }, 100);
   };
 
   const handleImportAudio = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -197,6 +218,14 @@ export const Toolbar: React.FC = () => {
           </button>
         </div>
       </div>
+
+      {/* Instrument Picker Modal */}
+      {showInstrumentPicker && (
+        <InstrumentPicker
+          onSelect={handleInstrumentSelect}
+          onClose={() => setShowInstrumentPicker(false)}
+        />
+      )}
     </div>
   );
 };

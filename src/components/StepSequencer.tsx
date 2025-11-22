@@ -1,26 +1,21 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import * as Tone from 'tone';
 import { useStore } from '../store/useStore';
+import { getDrumInstruments } from '../engine/InstrumentLibrary';
+import AudioEngine from '../engine/AudioEngine';
 import clsx from 'clsx';
 
-const INSTRUMENTS = [
-  { name: 'Kick', color: '#ef4444' },
-  { name: 'Snare', color: '#f59e0b' },
-  { name: 'Hi-Hat Closed', color: '#10b981' },
-  { name: 'Hi-Hat Open', color: '#06b6d4' },
-  { name: 'Clap', color: '#8b5cf6' },
-  { name: 'Tom', color: '#ec4899' },
-  { name: 'Cymbal', color: '#6366f1' },
-  { name: 'Perc', color: '#14b8a6' },
-];
-
 const STEPS = 16;
+const DRUM_INSTRUMENTS = getDrumInstruments();
 
 export const StepSequencer: React.FC = () => {
-  const { isPlaying } = useStore();
+  const { isPlaying, tempo } = useStore();
   const [currentStep, setCurrentStep] = useState(0);
   const [pattern, setPattern] = useState<boolean[][]>(
-    INSTRUMENTS.map(() => Array(STEPS).fill(false))
+    DRUM_INSTRUMENTS.map(() => Array(STEPS).fill(false))
   );
+  const audioEngine = useRef(AudioEngine.getInstance());
+  const sequenceRef = useRef<number | null>(null);
 
   const toggleStep = (instrumentIndex: number, stepIndex: number) => {
     setPattern((prev) => {
@@ -32,12 +27,12 @@ export const StepSequencer: React.FC = () => {
   };
 
   const clearPattern = () => {
-    setPattern(INSTRUMENTS.map(() => Array(STEPS).fill(false)));
+    setPattern(DRUM_INSTRUMENTS.map(() => Array(STEPS).fill(false)));
   };
 
   const randomizePattern = () => {
     setPattern(
-      INSTRUMENTS.map(() =>
+      DRUM_INSTRUMENTS.map(() =>
         Array(STEPS)
           .fill(false)
           .map(() => Math.random() > 0.7)
@@ -45,22 +40,58 @@ export const StepSequencer: React.FC = () => {
     );
   };
 
-  React.useEffect(() => {
-    if (isPlaying) {
-      const interval = setInterval(() => {
-        setCurrentStep((prev) => (prev + 1) % STEPS);
-      }, 125); // 120 BPM, 16th notes
+  const previewInstrument = (instrumentIndex: number) => {
+    const instrument = DRUM_INSTRUMENTS[instrumentIndex];
+    audioEngine.current.playInstrumentPreview(instrument.type);
+  };
 
-      return () => clearInterval(interval);
+  useEffect(() => {
+    if (!isPlaying) {
+      setCurrentStep(0);
+      if (sequenceRef.current !== null) {
+        Tone.Transport.clear(sequenceRef.current);
+        sequenceRef.current = null;
+      }
+      return;
     }
-  }, [isPlaying]);
+
+    // Calculate step duration based on tempo
+    const stepDuration = (60 / tempo) / 4; // 16th notes
+
+    let step = 0;
+    sequenceRef.current = Tone.Transport.scheduleRepeat((time) => {
+      setCurrentStep(step);
+
+      // Play all instruments that are active on this step
+      pattern.forEach((instrumentPattern, instrumentIndex) => {
+        if (instrumentPattern[step]) {
+          const instrument = DRUM_INSTRUMENTS[instrumentIndex];
+          audioEngine.current.playInstrumentPreview(instrument.type);
+        }
+      });
+
+      step = (step + 1) % STEPS;
+    }, stepDuration);
+
+    return () => {
+      if (sequenceRef.current !== null) {
+        Tone.Transport.clear(sequenceRef.current);
+        sequenceRef.current = null;
+      }
+    };
+  }, [isPlaying, pattern, tempo]);
 
   return (
     <div className="flex-1 overflow-auto bg-gray-900 p-6">
       <div className="max-w-6xl mx-auto">
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-white text-xl font-semibold">Step Sequencer</h2>
+          <div>
+            <h2 className="text-white text-xl font-semibold">Step Sequencer</h2>
+            <p className="text-gray-400 text-sm mt-1">
+              Click on the grid to create drum patterns
+            </p>
+          </div>
           <div className="flex gap-2">
             <button
               onClick={clearPattern}
@@ -81,7 +112,7 @@ export const StepSequencer: React.FC = () => {
         <div className="bg-gray-800 rounded-lg p-4">
           {/* Step Numbers */}
           <div className="flex mb-2">
-            <div className="w-32" />
+            <div className="w-40" />
             {Array.from({ length: STEPS }).map((_, i) => (
               <div
                 key={i}
@@ -96,19 +127,24 @@ export const StepSequencer: React.FC = () => {
           </div>
 
           {/* Instruments */}
-          {INSTRUMENTS.map((instrument, instrumentIndex) => (
-            <div key={instrument.name} className="flex items-center mb-2">
+          {DRUM_INSTRUMENTS.map((instrument, instrumentIndex) => (
+            <div key={instrument.type} className="flex items-center mb-2">
               {/* Instrument Name */}
-              <div className="w-32 pr-4">
-                <div className="flex items-center gap-2">
-                  <div
-                    className="w-3 h-3 rounded"
-                    style={{ backgroundColor: instrument.color }}
-                  />
-                  <span className="text-sm text-white font-medium">
-                    {instrument.name}
-                  </span>
-                </div>
+              <div className="w-40 pr-4">
+                <button
+                  onClick={() => previewInstrument(instrumentIndex)}
+                  className="w-full text-left hover:bg-gray-700 rounded px-2 py-1 transition-colors"
+                >
+                  <div className="flex items-center gap-2">
+                    <div
+                      className="w-3 h-3 rounded"
+                      style={{ backgroundColor: instrument.color }}
+                    />
+                    <span className="text-sm text-white font-medium">
+                      {instrument.name}
+                    </span>
+                  </div>
+                </button>
               </div>
 
               {/* Steps */}
@@ -120,10 +156,10 @@ export const StepSequencer: React.FC = () => {
                     className={clsx(
                       'flex-1 aspect-square rounded transition-all',
                       pattern[instrumentIndex][stepIndex]
-                        ? 'shadow-lg'
+                        ? 'shadow-lg transform scale-95'
                         : 'bg-gray-700 hover:bg-gray-600',
                       currentStep === stepIndex && isPlaying
-                        ? 'ring-2 ring-white'
+                        ? 'ring-2 ring-white ring-offset-2 ring-offset-gray-800'
                         : '',
                       stepIndex % 4 === 0 && 'ml-2'
                     )}
@@ -140,8 +176,20 @@ export const StepSequencer: React.FC = () => {
         </div>
 
         {/* Info */}
-        <div className="mt-4 text-center text-sm text-gray-400">
-          Click on the grid to toggle steps. Press play to hear the pattern.
+        <div className="mt-4 p-4 bg-gray-800 rounded-lg">
+          <div className="text-sm text-gray-300 space-y-1">
+            <p>
+              <span className="text-primary-400 font-medium">Tip:</span> Click on
+              instrument names to preview sounds
+            </p>
+            <p>
+              <span className="text-primary-400 font-medium">Tempo:</span> {tempo} BPM
+            </p>
+            <p>
+              <span className="text-primary-400 font-medium">Resolution:</span> 16 steps
+              (16th notes)
+            </p>
+          </div>
         </div>
       </div>
     </div>
