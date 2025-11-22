@@ -1,6 +1,11 @@
 {
-  "projectName": "Dubstep Bass Pattern (Sail Style)",
+  "version": "1.0.0",
+  "name": "Dubstep Bass Pattern (Sail Style)",
   "tempo": 140,
+  "loopEnabled": true,
+  "zoom": 1,
+  "masterVolume": 0.8,
+  "tracks": [],
   "stepSequencerPattern": [
     [true, false, false, false, true, false, false, false, true, false, false, false, true, false, false, false],
     [false, false, false, false, true, false, false, false, false, false, false, false, true, false, false, false],
