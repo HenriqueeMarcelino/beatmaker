@@ -101,11 +101,34 @@ export const StepSequencer: React.FC = () => {
     patternRef.current = pattern;
   }, [pattern]);
 
+  // Throttle UI updates using requestAnimationFrame for better performance
+  const rafIdRef = useRef<number | null>(null);
+  const pendingStepRef = useRef<number | null>(null);
+
+  const scheduleUIUpdate = (step: number) => {
+    pendingStepRef.current = step;
+    if (rafIdRef.current === null) {
+      rafIdRef.current = requestAnimationFrame(() => {
+        if (pendingStepRef.current !== null) {
+          setCurrentStep(pendingStepRef.current);
+          pendingStepRef.current = null;
+        }
+        rafIdRef.current = null;
+      });
+    }
+  };
+
   useEffect(() => {
     // IMPORTANT: Clear ALL scheduled events to prevent ghost sounds
     Tone.Transport.cancel(0);
     sequenceRef.current = null;
     setCurrentStep(0);
+
+    // Cancel any pending RAF
+    if (rafIdRef.current !== null) {
+      cancelAnimationFrame(rafIdRef.current);
+      rafIdRef.current = null;
+    }
 
     if (!isPlaying) {
       return;
@@ -121,9 +144,10 @@ export const StepSequencer: React.FC = () => {
       // Use ref to get current pattern (avoid stale closure)
       const currentPattern = patternRef.current;
 
-      setCurrentStep(step);
+      // Throttle UI updates using requestAnimationFrame
+      scheduleUIUpdate(step);
 
-      // Count active instruments on this step for volume normalization
+      // Count active instruments on this step
       const activeInstruments: number[] = [];
       currentPattern.forEach((instrumentPattern, instrumentIndex) => {
         if (instrumentPattern && instrumentPattern[step]) {
@@ -132,10 +156,11 @@ export const StepSequencer: React.FC = () => {
       });
 
       // Limit max simultaneous voices to prevent performance issues
-      const MAX_VOICES = 8;
+      // Reduced from 8 to 5 for better performance
+      const MAX_VOICES = 5;
       const voicesToPlay = activeInstruments.slice(0, MAX_VOICES);
 
-      // Play instruments with dynamic volume adjustment
+      // Play instruments
       voicesToPlay.forEach((instrumentIndex) => {
         const instrument = DRUM_INSTRUMENTS[instrumentIndex];
         if (instrument) {
@@ -143,21 +168,26 @@ export const StepSequencer: React.FC = () => {
         }
       });
 
-      // Warn if too many voices
-      if (activeInstruments.length > MAX_VOICES) {
+      // Only warn occasionally to avoid console spam
+      if (activeInstruments.length > MAX_VOICES && step % 8 === 0) {
         console.warn(`⚠️ Too many voices (${activeInstruments.length}), limiting to ${MAX_VOICES}`);
       }
 
       step = (step + 1) % STEPS;
     }, stepDuration);
 
-    console.log('🎵 Step Sequencer: Scheduler created');
+    console.log('🎵 Step Sequencer: Scheduler created (MAX_VOICES=5, RAF throttling enabled)');
 
     return () => {
       console.log('🧹 Step Sequencer: Cleaning up scheduler');
       if (sequenceRef.current !== null) {
         Tone.Transport.clear(sequenceRef.current);
         sequenceRef.current = null;
+      }
+      // Cancel any pending RAF
+      if (rafIdRef.current !== null) {
+        cancelAnimationFrame(rafIdRef.current);
+        rafIdRef.current = null;
       }
       // Extra safety: cancel all events
       Tone.Transport.cancel(0);
