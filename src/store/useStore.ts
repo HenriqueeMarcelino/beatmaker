@@ -10,6 +10,7 @@ interface AppState {
   tempo: number;
   currentTime: number;
   loopEnabled: boolean;
+  isRecordingMic: boolean;
 
   // Tracks
   tracks: Track[];
@@ -57,6 +58,8 @@ interface AppState {
   setMasterVolume: (volume: number) => void;
 
   exportAudio: () => Promise<void>;
+  startMicRecording: () => Promise<void>;
+  stopMicRecording: () => Promise<void>;
 }
 
 const audioEngine = AudioEngine.getInstance();
@@ -67,6 +70,7 @@ export const useStore = create<AppState>((set, get) => ({
   tempo: 120,
   currentTime: 0,
   loopEnabled: true,
+  isRecordingMic: false,
   tracks: [],
   selectedTrackId: null,
   stepSequencerPattern: [],
@@ -388,6 +392,64 @@ export const useStore = create<AppState>((set, get) => ({
       URL.revokeObjectURL(url);
     } catch (error) {
       console.error('Error exporting audio:', error);
+    }
+  },
+
+  startMicRecording: async () => {
+    try {
+      await audioEngine.startMicRecording();
+      set({ isRecordingMic: true });
+    } catch (error) {
+      console.error('Error starting mic recording:', error);
+      alert('Erro ao acessar microfone. Permissão negada?');
+    }
+  },
+
+  stopMicRecording: async () => {
+    try {
+      const blob = await audioEngine.stopMicRecording();
+      set({ isRecordingMic: false });
+
+      // Convert blob to File
+      const file = new File([blob], `recording-${Date.now()}.wav`, { type: 'audio/wav' });
+
+      // Find or create an audio track
+      const state = get();
+      let targetTrack = state.tracks.find(t => t.type === 'audio');
+
+      if (!targetTrack) {
+        const colors = ['#ef4444', '#f59e0b', '#10b981', '#3b82f6', '#8b5cf6', '#ec4899'];
+        state.addTrack({
+          name: `Recording ${state.tracks.length + 1}`,
+          type: 'audio',
+          volume: 0.8,
+          pan: 0,
+          muted: false,
+          solo: false,
+          color: colors[state.tracks.length % colors.length],
+        });
+
+        // Wait for track to be created
+        await new Promise(resolve => setTimeout(resolve, 50));
+        targetTrack = useStore.getState().tracks.find(t => t.type === 'audio');
+      }
+
+      if (targetTrack) {
+        // Add the recording as a clip
+        await state.addClip(
+          targetTrack.id,
+          {
+            trackId: targetTrack.id,
+            startTime: 0,
+            duration: 0, // Will be set from buffer
+            offset: 0,
+          },
+          file
+        );
+      }
+    } catch (error) {
+      console.error('Error stopping mic recording:', error);
+      set({ isRecordingMic: false });
     }
   },
 }));

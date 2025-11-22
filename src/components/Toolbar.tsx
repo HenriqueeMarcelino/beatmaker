@@ -9,6 +9,8 @@ import {
   Piano,
   Settings,
   Zap,
+  Mic,
+  Square,
 } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import { InstrumentPicker } from './InstrumentPicker';
@@ -26,6 +28,9 @@ export const Toolbar: React.FC = () => {
     zoom,
     setZoom,
     setTrackInstrument,
+    isRecordingMic,
+    startMicRecording,
+    stopMicRecording,
   } = useStore();
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -127,6 +132,14 @@ export const Toolbar: React.FC = () => {
     }
   };
 
+  const handleRecordToggle = async () => {
+    if (isRecordingMic) {
+      await stopMicRecording();
+    } else {
+      await startMicRecording();
+    }
+  };
+
   return (
     <div className="bg-gray-800 border-b border-gray-700">
       <div className="flex items-center justify-between px-4 py-2">
@@ -156,6 +169,28 @@ export const Toolbar: React.FC = () => {
           >
             <Upload className="w-4 h-4" />
             Import Audio
+          </button>
+
+          <button
+            onClick={handleRecordToggle}
+            className={clsx(
+              'flex items-center gap-2 px-3 py-2 text-white rounded transition-all text-sm font-medium',
+              isRecordingMic
+                ? 'bg-red-600 hover:bg-red-700 animate-pulse'
+                : 'bg-gray-700 hover:bg-gray-600'
+            )}
+          >
+            {isRecordingMic ? (
+              <>
+                <Square className="w-4 h-4" />
+                Stop Recording
+              </>
+            ) : (
+              <>
+                <Mic className="w-4 h-4" />
+                Record
+              </>
+            )}
           </button>
 
           <input

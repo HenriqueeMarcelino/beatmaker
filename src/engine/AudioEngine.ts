@@ -54,6 +54,9 @@ class AudioEngine {
   private activeParts: Tone.Part[] = [];
   private stepSequencerPattern: boolean[][] = [];
   private stepSequencerPart?: Tone.Sequence;
+  private micRecorder?: Tone.Recorder;
+  private micInput?: Tone.UserMedia;
+  private isRecordingMic: boolean = false;
 
   private constructor() {
     this.masterChannel = new Tone.Channel({
@@ -502,6 +505,54 @@ class AudioEngine {
     this.recorder = undefined;
 
     return recording;
+  }
+
+  // Microphone recording methods
+  async startMicRecording(): Promise<void> {
+    await this.init();
+
+    // Create microphone input
+    this.micInput = new Tone.UserMedia();
+    await this.micInput.open();
+
+    // Create recorder for mic
+    this.micRecorder = new Tone.Recorder();
+    this.micInput.connect(this.micRecorder);
+
+    // Start recording
+    this.micRecorder.start();
+    this.isRecordingMic = true;
+
+    console.log('🎤 Mic recording started');
+  }
+
+  async stopMicRecording(): Promise<Blob> {
+    if (!this.micRecorder || !this.isRecordingMic) {
+      throw new Error('Mic recording not started');
+    }
+
+    const recording = await this.micRecorder.stop();
+
+    // Cleanup
+    if (this.micInput) {
+      this.micInput.close();
+      this.micInput.dispose();
+      this.micInput = undefined;
+    }
+
+    if (this.micRecorder) {
+      this.micRecorder.dispose();
+      this.micRecorder = undefined;
+    }
+
+    this.isRecordingMic = false;
+    console.log('🎤 Mic recording stopped');
+
+    return recording;
+  }
+
+  isRecording(): boolean {
+    return this.isRecordingMic;
   }
 
   async exportAudio(): Promise<Blob> {
