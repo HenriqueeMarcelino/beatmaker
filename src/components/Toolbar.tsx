@@ -78,15 +78,20 @@ export const Toolbar: React.FC = () => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Create audio track if none exists
-    if (tracks.length === 0) {
-      handleAddAudioTrack();
+    // Find selected track or first audio track, or create a new one
+    let targetTrack = tracks.find((t) => t.id === useStore.getState().selectedTrackId && t.type === 'audio');
+
+    if (!targetTrack) {
+      targetTrack = tracks.find((t) => t.type === 'audio');
     }
 
-    // Wait for track to be added
-    await new Promise((resolve) => setTimeout(resolve, 100));
+    if (!targetTrack) {
+      // No audio track exists, create one
+      handleAddAudioTrack();
+      await new Promise((resolve) => setTimeout(resolve, 150));
+      targetTrack = useStore.getState().tracks.find((t) => t.type === 'audio');
+    }
 
-    const targetTrack = tracks.find((t) => t.type === 'audio');
     if (targetTrack) {
       await addClip(
         targetTrack.id,

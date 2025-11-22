@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import * as Tone from 'tone';
 import AudioEngine, { Track, Clip, Effect } from '../engine/AudioEngine';
 import { InstrumentType } from '../engine/InstrumentLibrary';
 import { generateId } from '../utils/generateId';
@@ -8,6 +9,7 @@ interface AppState {
   isPlaying: boolean;
   tempo: number;
   currentTime: number;
+  loopEnabled: boolean;
 
   // Tracks
   tracks: Track[];
@@ -27,6 +29,7 @@ interface AppState {
   stop: () => void;
   setTempo: (tempo: number) => void;
   setCurrentTime: (time: number) => void;
+  toggleLoop: () => void;
 
   addTrack: (track: Omit<Track, 'id' | 'clips' | 'effects'>) => void;
   removeTrack: (trackId: string) => void;
@@ -37,6 +40,7 @@ interface AppState {
   addClip: (trackId: string, clip: Omit<Clip, 'id'>, file?: File) => Promise<void>;
   removeClip: (trackId: string, clipId: string) => void;
   updateClip: (trackId: string, clipId: string, updates: Partial<Clip>) => void;
+  duplicateClip: (trackId: string, clipId: string) => void;
   setSelectedClip: (clipId: string | null) => void;
 
   addEffect: (trackId: string, effect: Omit<Effect, 'id' | 'node'>) => void;
@@ -57,6 +61,7 @@ export const useStore = create<AppState>((set, get) => ({
   isPlaying: false,
   tempo: 120,
   currentTime: 0,
+  loopEnabled: true,
   tracks: [],
   selectedTrackId: null,
   zoom: 1,
@@ -88,6 +93,12 @@ export const useStore = create<AppState>((set, get) => ({
 
   setCurrentTime: (time: number) => {
     set({ currentTime: time });
+  },
+
+  toggleLoop: () => {
+    const newLoopEnabled = !get().loopEnabled;
+    audioEngine.setLoop(newLoopEnabled, 0, 16); // Loop 16 seconds by default
+    set({ loopEnabled: newLoopEnabled });
   },
 
   // Track actions
@@ -200,6 +211,37 @@ export const useStore = create<AppState>((set, get) => ({
 
   setSelectedClip: (clipId: string | null) => {
     set({ selectedClipId: clipId });
+  },
+
+  duplicateClip: (trackId: string, clipId: string) => {
+    const state = get();
+    const track = state.tracks.find((t) => t.id === trackId);
+    if (!track) return;
+
+    const originalClip = track.clips.find((c) => c.id === clipId);
+    if (!originalClip) return;
+
+    // Create duplicate with new ID and offset position
+    const duplicatedClip: Clip = {
+      ...originalClip,
+      id: generateId('clip'),
+      startTime: originalClip.startTime + originalClip.duration, // Place right after original
+    };
+
+    // If it's an audio clip with a player, create a new player for the duplicate
+    if (originalClip.buffer && track.channel) {
+      const player = new Tone.Player(originalClip.buffer).connect(track.channel);
+      player.sync().start(duplicatedClip.startTime, duplicatedClip.offset, duplicatedClip.duration);
+      duplicatedClip.player = player;
+    }
+
+    set((state) => ({
+      tracks: state.tracks.map((t) =>
+        t.id === trackId
+          ? { ...t, clips: [...t.clips, duplicatedClip] }
+          : t
+      ),
+    }));
   },
 
   // Effect actions

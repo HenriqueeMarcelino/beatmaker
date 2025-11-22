@@ -87,6 +87,19 @@ class AudioEngine {
     Tone.Transport.stop();
   }
 
+  setLoop(enabled: boolean, loopStart: number = 0, loopEnd: number = 8): void {
+    Tone.Transport.loop = enabled;
+    if (enabled) {
+      Tone.Transport.loopStart = loopStart;
+      Tone.Transport.loopEnd = loopEnd;
+    }
+  }
+
+  setLoopPoints(loopStart: number, loopEnd: number): void {
+    Tone.Transport.loopStart = loopStart;
+    Tone.Transport.loopEnd = loopEnd;
+  }
+
   setTempo(bpm: number): void {
     Tone.Transport.bpm.value = bpm;
   }
@@ -432,9 +445,16 @@ class AudioEngine {
     const note = DRUM_NOTES[instrumentType] || 'C4';
     const now = Tone.now();
 
-    // Use duck typing instead of instanceof to avoid type checking issues
-    if (synth && typeof synth.triggerAttackRelease === 'function') {
-      synth.triggerAttackRelease(note, '8n', now, 0.8);
+    // NoiseSynth doesn't accept note parameter, just duration
+    if (synth.constructor.name === 'NoiseSynth') {
+      if (typeof (synth as any).triggerAttackRelease === 'function') {
+        (synth as any).triggerAttackRelease('8n', now);
+      }
+    } else {
+      // Use duck typing for other synths
+      if (synth && typeof synth.triggerAttackRelease === 'function') {
+        synth.triggerAttackRelease(note, '8n', now, 0.8);
+      }
     }
   }
 

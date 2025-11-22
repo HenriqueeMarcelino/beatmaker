@@ -1,9 +1,10 @@
 import React from 'react';
-import { Play, Pause, Square, SkipBack } from 'lucide-react';
+import { Play, Pause, Square, SkipBack, Repeat } from 'lucide-react';
 import { useStore } from '../store/useStore';
+import clsx from 'clsx';
 
 export const Transport: React.FC = () => {
-  const { isPlaying, tempo, play, pause, stop, setTempo } = useStore();
+  const { isPlaying, tempo, loopEnabled, play, pause, stop, setTempo, toggleLoop } = useStore();
 
   return (
     <div className="flex items-center gap-4 bg-gray-800 p-4 border-b border-gray-700">
@@ -41,6 +42,19 @@ export const Transport: React.FC = () => {
           title="Stop"
         >
           <Square className="w-5 h-5 text-gray-300 fill-gray-300" />
+        </button>
+
+        <button
+          onClick={toggleLoop}
+          className={clsx(
+            "p-2 rounded transition-colors",
+            loopEnabled
+              ? "bg-primary-600 hover:bg-primary-700 text-white"
+              : "hover:bg-gray-700 text-gray-300"
+          )}
+          title={loopEnabled ? "Loop Enabled" : "Loop Disabled"}
+        >
+          <Repeat className="w-5 h-5" />
         </button>
       </div>
 

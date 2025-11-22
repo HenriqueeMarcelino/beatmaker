@@ -1,17 +1,29 @@
 import React, { useRef, useState } from 'react';
 import { useStore } from '../store/useStore';
+import { ContextMenu } from './ContextMenu';
 import Draggable from 'react-draggable';
 import clsx from 'clsx';
 
 export const Timeline: React.FC = () => {
-  const { tracks, zoom, selectedClipId, setSelectedClip, updateClip } = useStore();
+  const { tracks, zoom, selectedClipId, setSelectedClip, updateClip, removeClip, duplicateClip } = useStore();
   const [draggedClip, setDraggedClip] = useState<{ trackId: string; clipId: string } | null>(null);
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; trackId: string; clipId: string } | null>(null);
 
   const pixelsPerSecond = 100 * zoom;
 
   const handleClipDrag = (trackId: string, clipId: string, data: { x: number; y: number }) => {
     const newStartTime = Math.max(0, data.x / pixelsPerSecond);
     updateClip(trackId, clipId, { startTime: newStartTime });
+  };
+
+  const handleContextMenu = (e: React.MouseEvent, trackId: string, clipId: string) => {
+    e.preventDefault();
+    setContextMenu({
+      x: e.clientX,
+      y: e.clientY,
+      trackId,
+      clipId,
+    });
   };
 
   return (
@@ -82,6 +94,7 @@ export const Timeline: React.FC = () => {
                       borderLeft: `3px solid ${track.color}`,
                     }}
                     onClick={() => setSelectedClip(clip.id)}
+                    onContextMenu={(e) => handleContextMenu(e, track.id, clip.id)}
                   >
                     <div className="px-2 py-1 text-xs text-white truncate">
                       Clip {clip.id.slice(-4)}
@@ -93,6 +106,17 @@ export const Timeline: React.FC = () => {
           </div>
         ))}
       </div>
+
+      {/* Context Menu */}
+      {contextMenu && (
+        <ContextMenu
+          x={contextMenu.x}
+          y={contextMenu.y}
+          onDuplicate={() => duplicateClip(contextMenu.trackId, contextMenu.clipId)}
+          onDelete={() => removeClip(contextMenu.trackId, contextMenu.clipId)}
+          onClose={() => setContextMenu(null)}
+        />
+      )}
     </div>
   );
 };

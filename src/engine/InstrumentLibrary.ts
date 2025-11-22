@@ -43,10 +43,11 @@ const createSnare = (): Tone.NoiseSynth => {
     noise: { type: 'white' },
     envelope: {
       attack: 0.001,
-      decay: 0.2,
+      decay: 0.15,
       sustain: 0,
-      release: 0.2
-    }
+      release: 0.15
+    },
+    volume: -8 // Aumenta o volume
   });
 };
 
@@ -55,13 +56,14 @@ const createHiHatClosed = (): Tone.MetalSynth => {
     frequency: 200,
     envelope: {
       attack: 0.001,
-      decay: 0.1,
+      decay: 0.05,
       release: 0.01
     },
     harmonicity: 5.1,
     modulationIndex: 32,
     resonance: 4000,
-    octaves: 1.5
+    octaves: 1.5,
+    volume: -12 // Ajusta volume
   });
 };
 
@@ -85,10 +87,11 @@ const createClap = (): Tone.NoiseSynth => {
     noise: { type: 'white' },
     envelope: {
       attack: 0.001,
-      decay: 0.15,
+      decay: 0.12,
       sustain: 0,
-      release: 0.15
-    }
+      release: 0.12
+    },
+    volume: -6 // Aumenta o volume
   });
 };
 
