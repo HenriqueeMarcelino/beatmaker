@@ -22,10 +22,38 @@ export const StepSequencer: React.FC = () => {
   const audioEngine = useRef(AudioEngine.getInstance());
   const sequenceRef = useRef<number | null>(null);
 
-  // Initialize pattern if empty
-  const pattern = stepSequencerPattern.length > 0
-    ? stepSequencerPattern
-    : DRUM_INSTRUMENTS.map(() => Array(STEPS).fill(false));
+  // Initialize pattern if empty OR normalize to match current instrument count
+  const normalizePattern = () => {
+    if (stepSequencerPattern.length === 0) {
+      // No pattern exists, create new one
+      return DRUM_INSTRUMENTS.map(() => Array(STEPS).fill(false));
+    }
+
+    // Pattern exists but may have wrong size (from old version with fewer instruments)
+    const normalized = [...stepSequencerPattern];
+
+    // If pattern has fewer instruments than current library, add empty rows
+    while (normalized.length < DRUM_INSTRUMENTS.length) {
+      normalized.push(Array(STEPS).fill(false));
+    }
+
+    // If pattern has more instruments than current library, trim it (shouldn't happen)
+    if (normalized.length > DRUM_INSTRUMENTS.length) {
+      normalized.length = DRUM_INSTRUMENTS.length;
+    }
+
+    return normalized;
+  };
+
+  const pattern = normalizePattern();
+
+  // Persist normalized pattern if it was changed
+  useEffect(() => {
+    if (stepSequencerPattern.length !== DRUM_INSTRUMENTS.length) {
+      console.log(`📊 Normalizing pattern: ${stepSequencerPattern.length} → ${DRUM_INSTRUMENTS.length} instruments`);
+      setStepSequencerPattern(pattern);
+    }
+  }, []);
 
   const setPattern = (newPattern: boolean[][] | ((prev: boolean[][]) => boolean[][])) => {
     if (typeof newPattern === 'function') {
