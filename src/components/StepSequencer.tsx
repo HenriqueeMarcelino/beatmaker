@@ -9,13 +9,23 @@ const STEPS = 16;
 const DRUM_INSTRUMENTS = getDrumInstruments();
 
 export const StepSequencer: React.FC = () => {
-  const { isPlaying, tempo } = useStore();
+  const { isPlaying, tempo, stepSequencerPattern, setStepSequencerPattern } = useStore();
   const [currentStep, setCurrentStep] = useState(0);
-  const [pattern, setPattern] = useState<boolean[][]>(
-    DRUM_INSTRUMENTS.map(() => Array(STEPS).fill(false))
-  );
   const audioEngine = useRef(AudioEngine.getInstance());
   const sequenceRef = useRef<number | null>(null);
+
+  // Initialize pattern if empty
+  const pattern = stepSequencerPattern.length > 0
+    ? stepSequencerPattern
+    : DRUM_INSTRUMENTS.map(() => Array(STEPS).fill(false));
+
+  const setPattern = (newPattern: boolean[][] | ((prev: boolean[][]) => boolean[][])) => {
+    if (typeof newPattern === 'function') {
+      setStepSequencerPattern(newPattern(pattern));
+    } else {
+      setStepSequencerPattern(newPattern);
+    }
+  };
 
   const toggleStep = (instrumentIndex: number, stepIndex: number) => {
     setPattern((prev) => {

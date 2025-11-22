@@ -15,6 +15,10 @@ interface AppState {
   tracks: Track[];
   selectedTrackId: string | null;
 
+  // Step Sequencer
+  stepSequencerPattern: boolean[][];
+  setStepSequencerPattern: (pattern: boolean[][]) => void;
+
   // UI
   zoom: number;
   viewMode: 'timeline' | 'piano-roll' | 'step-sequencer';
@@ -65,6 +69,7 @@ export const useStore = create<AppState>((set, get) => ({
   loopEnabled: true,
   tracks: [],
   selectedTrackId: null,
+  stepSequencerPattern: [],
   zoom: 1,
   viewMode: 'timeline',
   selectedClipId: null,
@@ -72,7 +77,10 @@ export const useStore = create<AppState>((set, get) => ({
 
   // Playback actions
   play: async () => {
+    const state = get();
     await audioEngine.init();
+    // Set step sequencer pattern before playing
+    audioEngine.setStepSequencerPattern(state.stepSequencerPattern);
     await audioEngine.play();
     set({ isPlaying: true });
   },
@@ -254,23 +262,32 @@ export const useStore = create<AppState>((set, get) => ({
 
     if (!fromTrack || !toTrack || fromTrackId === toTrackId) return;
 
-    const clip = fromTrack.clips.find((c) => c.id === clipId);
-    if (!clip) return;
+    const originalClip = fromTrack.clips.find((c) => c.id === clipId);
+    if (!originalClip) return;
 
-    // Remove clip from old track
-    if (clip.player) {
-      clip.player.dispose();
+    // Create a new clip object for the new track
+    const movedClip: Clip = {
+      ...originalClip,
+      trackId: toTrackId,
+    };
+
+    // Remove player from old clip
+    if (originalClip.player) {
+      originalClip.player.dispose();
     }
 
     // Create new player if it's an audio clip
-    if (clip.buffer && toTrack.channel) {
-      const player = new Tone.Player(clip.buffer).connect(toTrack.channel);
-      player.sync().start(clip.startTime, clip.offset, clip.duration);
-      clip.player = player;
+    if (movedClip.buffer && toTrack.channel) {
+      const player = new Tone.Player(movedClip.buffer).connect(toTrack.channel);
+      player.sync();
+      movedClip.player = player;
     }
 
-    // Update trackId
-    clip.trackId = toTrackId;
+    // Update audio engine
+    audioEngine.removeClip(fromTrackId, clipId);
+    if (movedClip.buffer) {
+      audioEngine.addAudioClip(toTrackId, movedClip, movedClip.buffer);
+    }
 
     set((state) => ({
       tracks: state.tracks.map((t) => {
@@ -278,7 +295,7 @@ export const useStore = create<AppState>((set, get) => ({
           return { ...t, clips: t.clips.filter((c) => c.id !== clipId) };
         }
         if (t.id === toTrackId) {
-          return { ...t, clips: [...t.clips, clip] };
+          return { ...t, clips: [...t.clips, movedClip] };
         }
         return t;
       }),
@@ -345,6 +362,10 @@ export const useStore = create<AppState>((set, get) => ({
     set({ viewMode: mode });
   },
 
+  setStepSequencerPattern: (pattern: boolean[][]) => {
+    set({ stepSequencerPattern: pattern });
+  },
+
   setMasterVolume: (volume: number) => {
     audioEngine.setMasterVolume(volume);
     set({ masterVolume: volume });
@@ -352,6 +373,9 @@ export const useStore = create<AppState>((set, get) => ({
 
   exportAudio: async () => {
     try {
+      const state = get();
+      // Set step sequencer pattern before exporting
+      audioEngine.setStepSequencerPattern(state.stepSequencerPattern);
       const blob = await audioEngine.exportAudio();
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');

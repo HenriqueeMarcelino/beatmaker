@@ -1,5 +1,5 @@
 import * as Tone from 'tone';
-import { InstrumentType, createInstrument, DRUM_NOTES } from './InstrumentLibrary';
+import { InstrumentType, createInstrument, DRUM_NOTES, getDrumInstruments } from './InstrumentLibrary';
 
 export interface Track {
   id: string;
@@ -51,6 +51,9 @@ class AudioEngine {
   private masterChannel: Tone.Channel;
   private recorder?: Tone.Recorder;
   private previewSynths: Map<InstrumentType, Tone.Instrument> = new Map();
+  private activeParts: Tone.Part[] = [];
+  private stepSequencerPattern: boolean[][] = [];
+  private stepSequencerPart?: Tone.Sequence;
 
   private constructor() {
     this.masterChannel = new Tone.Channel({
@@ -77,36 +80,93 @@ class AudioEngine {
   async play(): Promise<void> {
     await this.init();
 
+    // Dispose and clear previously scheduled parts
+    this.activeParts.forEach(part => part.dispose());
+    this.activeParts = [];
+    Tone.Transport.cancel();
+
     // Schedule all clips
     this.tracks.forEach(track => {
       track.clips.forEach(clip => {
         // Handle audio clips
-        if (clip.player && clip.buffer) {
-          clip.player.stop();
-          clip.player.start(clip.startTime, clip.offset, clip.duration);
+        if (clip.player && clip.buffer && clip.buffer.loaded) {
+          try {
+            if (clip.player.state === 'started') {
+              clip.player.stop();
+            }
+            clip.player.start(clip.startTime, clip.offset, clip.duration);
+          } catch (error) {
+            console.warn('Error starting player:', error);
+          }
         }
 
         // Handle instrument clips with notes
         if (clip.notes && clip.notes.length > 0 && track.instrument) {
-          clip.notes.forEach(note => {
-            const noteTime = clip.startTime + note.startTime;
-            const noteName = Tone.Frequency(note.pitch, 'midi').toNote();
+          // Create events array for Tone.Part
+          const events = clip.notes.map(note => ({
+            time: clip.startTime + note.startTime,
+            note: Tone.Frequency(note.pitch, 'midi').toNote(),
+            duration: note.duration,
+            velocity: note.velocity
+          }));
 
-            // Schedule note using Tone.Transport
-            Tone.Transport.schedule((time) => {
-              if (track.instrument && typeof track.instrument.triggerAttackRelease === 'function') {
-                track.instrument.triggerAttackRelease(noteName, note.duration, time, note.velocity);
-              }
-            }, noteTime);
-          });
+          // Create a Part that loops with Transport
+          const part = new Tone.Part((time, event) => {
+            if (track.instrument && typeof track.instrument.triggerAttackRelease === 'function') {
+              track.instrument.triggerAttackRelease(event.note, event.duration, time, event.velocity);
+            }
+          }, events);
+
+          part.loop = true;
+          part.loopStart = 0;
+          part.start(0);
+
+          this.activeParts.push(part);
         }
       });
     });
 
+    // Schedule step sequencer if pattern exists
+    if (this.stepSequencerPattern.length > 0) {
+      const DRUM_INSTRUMENTS = getDrumInstruments();
+      const STEPS = 16;
+      const tempo = Tone.Transport.bpm.value;
+      const stepDuration = (60 / tempo) / 4; // 16th notes
+
+      // Dispose previous step sequencer part if exists
+      if (this.stepSequencerPart) {
+        this.stepSequencerPart.dispose();
+      }
+
+      // Create sequence for step sequencer
+      this.stepSequencerPart = new Tone.Sequence(
+        (time, step) => {
+          // Play all instruments active on this step
+          this.stepSequencerPattern.forEach((instrumentPattern, instrumentIndex) => {
+            if (instrumentPattern[step] && DRUM_INSTRUMENTS[instrumentIndex]) {
+              const instrument = DRUM_INSTRUMENTS[instrumentIndex];
+              this.playInstrumentPreview(instrument.type);
+            }
+          });
+        },
+        Array.from({ length: STEPS }, (_, i) => i),
+        stepDuration
+      );
+
+      this.stepSequencerPart.start(0);
+      this.stepSequencerPart.loop = true;
+    }
+
     // Calculate loop end based on content
     const maxTime = this.calculateTotalDuration();
     if (maxTime > 0) {
-      this.setLoop(true, 0, Math.max(8, Math.ceil(maxTime)));
+      const loopEnd = Math.max(8, Math.ceil(maxTime));
+      this.setLoop(true, 0, loopEnd);
+
+      // Set loop end for all parts
+      this.activeParts.forEach(part => {
+        part.loopEnd = loopEnd;
+      });
     }
 
     Tone.Transport.start();
@@ -119,6 +179,16 @@ class AudioEngine {
   stop(): void {
     Tone.Transport.stop();
     Tone.Transport.cancel(); // Clear all scheduled events
+
+    // Dispose all active parts
+    this.activeParts.forEach(part => part.dispose());
+    this.activeParts = [];
+
+    // Dispose step sequencer part
+    if (this.stepSequencerPart) {
+      this.stepSequencerPart.dispose();
+      this.stepSequencerPart = undefined;
+    }
   }
 
   setLoop(enabled: boolean, loopStart: number = 0, loopEnd: number = 8): void {
@@ -387,6 +457,10 @@ class AudioEngine {
     this.masterChannel.volume.value = Tone.gainToDb(volume);
   }
 
+  setStepSequencerPattern(pattern: boolean[][]): void {
+    this.stepSequencerPattern = pattern;
+  }
+
   async startRecording(): Promise<void> {
     this.recorder = new Tone.Recorder();
     this.masterChannel.connect(this.recorder);
@@ -408,15 +482,23 @@ class AudioEngine {
   async exportAudio(): Promise<Blob> {
     await this.startRecording();
 
-    // Play from start to end
-    const duration = this.calculateTotalDuration();
+    // Stop any current playback and reset position
     Tone.Transport.stop();
     Tone.Transport.position = 0;
-    Tone.Transport.start();
+
+    // Schedule all clips and patterns using the play method
+    await this.play();
+
+    // Calculate duration (use at least 4 seconds for step sequencer)
+    let duration = this.calculateTotalDuration();
+    if (this.stepSequencerPattern.length > 0 && duration === 0) {
+      duration = 4; // Default to 4 seconds for step sequencer only
+    }
 
     // Wait for playback to complete
-    await new Promise(resolve => setTimeout(resolve, duration * 1000));
+    await new Promise(resolve => setTimeout(resolve, (duration + 0.5) * 1000));
 
+    // Stop and return recording
     Tone.Transport.stop();
     return await this.stopRecording();
   }
