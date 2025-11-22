@@ -410,14 +410,16 @@ class AudioEngine {
 
     const now = Tone.now();
 
-    if (track.instrument instanceof Tone.PolySynth) {
-      track.instrument.triggerAttackRelease(note, duration, now, velocity);
-    } else if (track.instrument instanceof Tone.Instrument) {
+    // Use duck typing instead of instanceof
+    if (track.instrument && typeof track.instrument.triggerAttackRelease === 'function') {
       track.instrument.triggerAttackRelease(note, duration, now, velocity);
     }
   }
 
-  playInstrumentPreview(instrumentType: InstrumentType): void {
+  async playInstrumentPreview(instrumentType: InstrumentType): Promise<void> {
+    // Ensure audio context is started
+    await Tone.start();
+
     if (!this.previewSynths.has(instrumentType)) {
       const synth = createInstrument(instrumentType);
       synth.toDestination();
@@ -430,9 +432,8 @@ class AudioEngine {
     const note = DRUM_NOTES[instrumentType] || 'C4';
     const now = Tone.now();
 
-    if (synth instanceof Tone.PolySynth) {
-      synth.triggerAttackRelease(note, '8n', now, 0.8);
-    } else if (synth instanceof Tone.Instrument) {
+    // Use duck typing instead of instanceof to avoid type checking issues
+    if (synth && typeof synth.triggerAttackRelease === 'function') {
       synth.triggerAttackRelease(note, '8n', now, 0.8);
     }
   }
@@ -447,9 +448,8 @@ class AudioEngine {
     const track = this.tracks.get(trackId);
     if (!track?.instrument) return;
 
-    if (track.instrument instanceof Tone.PolySynth) {
-      track.instrument.triggerAttackRelease(note, duration, time, velocity);
-    } else if (track.instrument instanceof Tone.Instrument) {
+    // Use duck typing instead of instanceof
+    if (track.instrument && typeof track.instrument.triggerAttackRelease === 'function') {
       track.instrument.triggerAttackRelease(note, duration, time, velocity);
     }
   }

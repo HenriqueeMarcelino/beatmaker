@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import AudioEngine, { Track, Clip, Effect } from '../engine/AudioEngine';
 import { InstrumentType } from '../engine/InstrumentLibrary';
+import { generateId } from '../utils/generateId';
 
 interface AppState {
   // Playback
@@ -93,7 +94,7 @@ export const useStore = create<AppState>((set, get) => ({
   addTrack: (trackData) => {
     const track: Track = {
       ...trackData,
-      id: `track-${Date.now()}-${Math.random()}`,
+      id: generateId('track'),
       clips: [],
       effects: [],
     };
@@ -153,7 +154,7 @@ export const useStore = create<AppState>((set, get) => ({
   addClip: async (trackId: string, clipData, file?: File) => {
     const clip: Clip = {
       ...clipData,
-      id: `clip-${Date.now()}-${Math.random()}`,
+      id: generateId('clip'),
     };
 
     if (file) {
@@ -205,7 +206,7 @@ export const useStore = create<AppState>((set, get) => ({
   addEffect: (trackId: string, effectData) => {
     const effect: Effect = {
       ...effectData,
-      id: `effect-${Date.now()}-${Math.random()}`,
+      id: generateId('effect'),
     };
 
     audioEngine.addEffect(trackId, effect);
