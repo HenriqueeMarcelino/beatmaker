@@ -21,6 +21,19 @@ export type InstrumentType =
   | 'agogo'
   | 'triangle'
   | 'bass-808'
+  | 'tom-high'
+  | 'tom-mid'
+  | 'tom-low'
+  | 'conga-high'
+  | 'conga-low'
+  | 'bongo-high'
+  | 'bongo-low'
+  | 'woodblock'
+  | 'bell'
+  | 'china-cymbal'
+  | 'splash-cymbal'
+  | 'kick-deep'
+  | 'snare-tight'
   | 'synth-bass'
   | 'synth-lead'
   | 'synth-pad'
@@ -343,6 +356,206 @@ const createBass808 = (): Tone.MembraneSynth => {
   });
 };
 
+// NEW INSTRUMENTS - More variety for music production!
+
+const createTomHigh = (): Tone.MembraneSynth => {
+  return new Tone.MembraneSynth({
+    pitchDecay: 0.04,
+    octaves: 4,
+    oscillator: { type: 'sine' },
+    envelope: {
+      attack: 0.001,
+      decay: 0.15,
+      sustain: 0.01,
+      release: 0.3
+    },
+    volume: -5
+  });
+};
+
+const createTomMid = (): Tone.MembraneSynth => {
+  return new Tone.MembraneSynth({
+    pitchDecay: 0.05,
+    octaves: 5,
+    oscillator: { type: 'sine' },
+    envelope: {
+      attack: 0.001,
+      decay: 0.2,
+      sustain: 0.01,
+      release: 0.4
+    },
+    volume: -5
+  });
+};
+
+const createTomLow = (): Tone.MembraneSynth => {
+  return new Tone.MembraneSynth({
+    pitchDecay: 0.06,
+    octaves: 6,
+    oscillator: { type: 'sine' },
+    envelope: {
+      attack: 0.001,
+      decay: 0.3,
+      sustain: 0.01,
+      release: 0.5
+    },
+    volume: -4
+  });
+};
+
+const createCongaHigh = (): Tone.MembraneSynth => {
+  return new Tone.MembraneSynth({
+    pitchDecay: 0.03,
+    octaves: 3,
+    oscillator: { type: 'triangle' },
+    envelope: {
+      attack: 0.001,
+      decay: 0.12,
+      sustain: 0,
+      release: 0.08
+    },
+    volume: -7
+  });
+};
+
+const createCongaLow = (): Tone.MembraneSynth => {
+  return new Tone.MembraneSynth({
+    pitchDecay: 0.04,
+    octaves: 4,
+    oscillator: { type: 'triangle' },
+    envelope: {
+      attack: 0.001,
+      decay: 0.18,
+      sustain: 0,
+      release: 0.12
+    },
+    volume: -6
+  });
+};
+
+const createBongoHigh = (): Tone.MembraneSynth => {
+  return new Tone.MembraneSynth({
+    pitchDecay: 0.02,
+    octaves: 2.5,
+    oscillator: { type: 'triangle' },
+    envelope: {
+      attack: 0.001,
+      decay: 0.08,
+      sustain: 0,
+      release: 0.05
+    },
+    volume: -8
+  });
+};
+
+const createBongoLow = (): Tone.MembraneSynth => {
+  return new Tone.MembraneSynth({
+    pitchDecay: 0.03,
+    octaves: 3,
+    oscillator: { type: 'triangle' },
+    envelope: {
+      attack: 0.001,
+      decay: 0.12,
+      sustain: 0,
+      release: 0.08
+    },
+    volume: -7
+  });
+};
+
+const createWoodblock = (): Tone.Synth => {
+  return new Tone.Synth({
+    oscillator: { type: 'square' },
+    envelope: {
+      attack: 0.001,
+      decay: 0.02,
+      sustain: 0,
+      release: 0.02
+    },
+    volume: -4
+  });
+};
+
+const createBell = (): Tone.MetalSynth => {
+  return new Tone.MetalSynth({
+    frequency: 800,
+    envelope: {
+      attack: 0.001,
+      decay: 1.2,
+      release: 0.8
+    },
+    harmonicity: 12,
+    modulationIndex: 25,
+    resonance: 8000,
+    octaves: 0.5,
+    volume: -12
+  });
+};
+
+const createChinaCymbal = (): Tone.MetalSynth => {
+  return new Tone.MetalSynth({
+    frequency: 320,
+    envelope: {
+      attack: 0.005,
+      decay: 2.0,
+      release: 0.8
+    },
+    harmonicity: 4,
+    modulationIndex: 90,
+    resonance: 4500,
+    octaves: 2.5,
+    volume: -6
+  });
+};
+
+const createSplashCymbal = (): Tone.MetalSynth => {
+  return new Tone.MetalSynth({
+    frequency: 400,
+    envelope: {
+      attack: 0.001,
+      decay: 0.3,
+      release: 0.15
+    },
+    harmonicity: 7,
+    modulationIndex: 45,
+    resonance: 6000,
+    octaves: 1.2,
+    volume: -9
+  });
+};
+
+const createKickDeep = (): Tone.MembraneSynth => {
+  return new Tone.MembraneSynth({
+    pitchDecay: 0.08,
+    octaves: 12,
+    oscillator: { type: 'sine' },
+    envelope: {
+      attack: 0.001,
+      decay: 0.6,
+      sustain: 0,
+      release: 1.8,
+      attackCurve: 'exponential'
+    },
+    volume: 0
+  });
+};
+
+const createSnareTight = (): Tone.MetalSynth => {
+  return new Tone.MetalSynth({
+    frequency: 150,
+    envelope: {
+      attack: 0.001,
+      decay: 0.08,
+      release: 0.05
+    },
+    harmonicity: 4.5,
+    modulationIndex: 50,
+    resonance: 4000,
+    octaves: 1,
+    volume: -6
+  });
+};
+
 // Melodic Instruments
 const createSynthBass = (): Tone.MonoSynth => {
   return new Tone.MonoSynth({
@@ -549,6 +762,97 @@ export const INSTRUMENT_LIBRARY: Record<InstrumentType, InstrumentConfig> = {
     category: 'drums',
     createSynth: createBass808
   },
+  'tom-high': {
+    name: 'Tom High',
+    type: 'tom-high',
+    color: '#f97316',
+    category: 'drums',
+    createSynth: createTomHigh
+  },
+  'tom-mid': {
+    name: 'Tom Mid',
+    type: 'tom-mid',
+    color: '#fb923c',
+    category: 'drums',
+    createSynth: createTomMid
+  },
+  'tom-low': {
+    name: 'Tom Low',
+    type: 'tom-low',
+    color: '#fdba74',
+    category: 'drums',
+    createSynth: createTomLow
+  },
+  'conga-high': {
+    name: 'Conga High',
+    type: 'conga-high',
+    color: '#d946ef',
+    category: 'drums',
+    createSynth: createCongaHigh
+  },
+  'conga-low': {
+    name: 'Conga Low',
+    type: 'conga-low',
+    color: '#e879f9',
+    category: 'drums',
+    createSynth: createCongaLow
+  },
+  'bongo-high': {
+    name: 'Bongo High',
+    type: 'bongo-high',
+    color: '#c026d3',
+    category: 'drums',
+    createSynth: createBongoHigh
+  },
+  'bongo-low': {
+    name: 'Bongo Low',
+    type: 'bongo-low',
+    color: '#d946ef',
+    category: 'drums',
+    createSynth: createBongoLow
+  },
+  'woodblock': {
+    name: 'Woodblock',
+    type: 'woodblock',
+    color: '#92400e',
+    category: 'drums',
+    createSynth: createWoodblock
+  },
+  'bell': {
+    name: 'Bell',
+    type: 'bell',
+    color: '#fde047',
+    category: 'drums',
+    createSynth: createBell
+  },
+  'china-cymbal': {
+    name: 'China Cymbal',
+    type: 'china-cymbal',
+    color: '#818cf8',
+    category: 'drums',
+    createSynth: createChinaCymbal
+  },
+  'splash-cymbal': {
+    name: 'Splash',
+    type: 'splash-cymbal',
+    color: '#a5b4fc',
+    category: 'drums',
+    createSynth: createSplashCymbal
+  },
+  'kick-deep': {
+    name: 'Kick Deep',
+    type: 'kick-deep',
+    color: '#991b1b',
+    category: 'drums',
+    createSynth: createKickDeep
+  },
+  'snare-tight': {
+    name: 'Snare Tight',
+    type: 'snare-tight',
+    color: '#ea580c',
+    category: 'drums',
+    createSynth: createSnareTight
+  },
   'synth-bass': {
     name: 'Synth Bass',
     type: 'synth-bass',
@@ -616,6 +920,19 @@ export const DRUM_NOTES: Record<InstrumentType, string> = {
   'agogo': 'A2',
   'triangle': 'A#2',
   'bass-808': 'C0',
+  'tom-high': 'A1',
+  'tom-mid': 'F1',
+  'tom-low': 'D1',
+  'conga-high': 'B1',
+  'conga-low': 'G1',
+  'bongo-high': 'C2',
+  'bongo-low': 'A1',
+  'woodblock': 'D2',
+  'bell': 'E2',
+  'china-cymbal': 'F2',
+  'splash-cymbal': 'G2',
+  'kick-deep': 'B0',
+  'snare-tight': 'C#1',
   'synth-bass': 'C2',
   'synth-lead': 'C4',
   'synth-pad': 'C3',
