@@ -9,6 +9,10 @@ export type InstrumentType =
   | 'tom'
   | 'cymbal'
   | 'perc'
+  | 'rimshot'
+  | 'cowbell'
+  | 'shaker'
+  | 'bass-808'
   | 'synth-bass'
   | 'synth-lead'
   | 'synth-pad'
@@ -136,6 +140,67 @@ const createPerc = (): Tone.Synth => {
   });
 };
 
+const createRimshot = (): Tone.MetalSynth => {
+  return new Tone.MetalSynth({
+    frequency: 800,
+    envelope: {
+      attack: 0.001,
+      decay: 0.03,
+      release: 0.01
+    },
+    harmonicity: 8,
+    modulationIndex: 16,
+    resonance: 2000,
+    octaves: 0.5,
+    volume: -10
+  });
+};
+
+const createCowbell = (): Tone.MetalSynth => {
+  return new Tone.MetalSynth({
+    frequency: 540,
+    envelope: {
+      attack: 0.001,
+      decay: 0.15,
+      release: 0.08
+    },
+    harmonicity: 6,
+    modulationIndex: 25,
+    resonance: 3000,
+    octaves: 1,
+    volume: -8
+  });
+};
+
+const createShaker = (): Tone.NoiseSynth => {
+  return new Tone.NoiseSynth({
+    noise: { type: 'white' },
+    envelope: {
+      attack: 0.001,
+      decay: 0.05,
+      sustain: 0,
+      release: 0.05
+    },
+    volume: -12
+  });
+};
+
+const createBass808 = (): Tone.MembraneSynth => {
+  return new Tone.MembraneSynth({
+    pitchDecay: 0.08,
+    octaves: 6,
+    oscillator: { type: 'sine' },
+    envelope: {
+      attack: 0.001,
+      decay: 0.6,
+      sustain: 0.01,
+      release: 1.2,
+      attackCurve: 'exponential'
+    },
+    volume: -3
+  });
+};
+
 // Melodic Instruments
 const createSynthBass = (): Tone.MonoSynth => {
   return new Tone.MonoSynth({
@@ -258,6 +323,34 @@ export const INSTRUMENT_LIBRARY: Record<InstrumentType, InstrumentConfig> = {
     category: 'drums',
     createSynth: createPerc
   },
+  'rimshot': {
+    name: 'Rimshot',
+    type: 'rimshot',
+    color: '#f97316',
+    category: 'drums',
+    createSynth: createRimshot
+  },
+  'cowbell': {
+    name: 'Cowbell',
+    type: 'cowbell',
+    color: '#fbbf24',
+    category: 'drums',
+    createSynth: createCowbell
+  },
+  'shaker': {
+    name: 'Shaker',
+    type: 'shaker',
+    color: '#84cc16',
+    category: 'drums',
+    createSynth: createShaker
+  },
+  'bass-808': {
+    name: '808 Bass',
+    type: 'bass-808',
+    color: '#dc2626',
+    category: 'drums',
+    createSynth: createBass808
+  },
   'synth-bass': {
     name: 'Synth Bass',
     type: 'synth-bass',
@@ -313,6 +406,10 @@ export const DRUM_NOTES: Record<InstrumentType, string> = {
   'tom': 'G1',
   'cymbal': 'C2',
   'perc': 'D2',
+  'rimshot': 'C#1',
+  'cowbell': 'D#2',
+  'shaker': 'F1',
+  'bass-808': 'C0',
   'synth-bass': 'C2',
   'synth-lead': 'C4',
   'synth-pad': 'C3',

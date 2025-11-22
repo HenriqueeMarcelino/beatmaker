@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { useStore } from '../store/useStore';
 import { ContextMenu } from './ContextMenu';
 import Draggable from 'react-draggable';
@@ -10,6 +10,33 @@ export const Timeline: React.FC = () => {
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; trackId: string; clipId: string } | null>(null);
 
   const pixelsPerSecond = 100 * zoom;
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (!selectedClipId) return;
+
+      // Find the track that contains the selected clip
+      const track = tracks.find(t => t.clips.some(c => c.id === selectedClipId));
+      if (!track) return;
+
+      // Delete key - Remove clip
+      if (e.key === 'Delete' || e.key === 'Backspace') {
+        e.preventDefault();
+        removeClip(track.id, selectedClipId);
+        setSelectedClip(null);
+      }
+
+      // Ctrl+D or Cmd+D - Duplicate clip
+      if ((e.ctrlKey || e.metaKey) && e.key === 'd') {
+        e.preventDefault();
+        duplicateClip(track.id, selectedClipId);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [selectedClipId, tracks, removeClip, duplicateClip, setSelectedClip]);
 
   const handleClipDrag = (trackId: string, clipId: string, data: { x: number; y: number }) => {
     const newStartTime = Math.max(0, data.x / pixelsPerSecond);

@@ -448,7 +448,8 @@ class AudioEngine {
     // NoiseSynth doesn't accept note parameter, just duration
     if (synth.constructor.name === 'NoiseSynth') {
       if (typeof (synth as any).triggerAttackRelease === 'function') {
-        (synth as any).triggerAttackRelease('8n', now);
+        // NoiseSynth.triggerAttackRelease(duration, time) - time is optional
+        (synth as any).triggerAttackRelease('8n');
       }
     } else {
       // Use duck typing for other synths

@@ -41,6 +41,7 @@ interface AppState {
   removeClip: (trackId: string, clipId: string) => void;
   updateClip: (trackId: string, clipId: string, updates: Partial<Clip>) => void;
   duplicateClip: (trackId: string, clipId: string) => void;
+  moveClipToTrack: (fromTrackId: string, toTrackId: string, clipId: string) => void;
   setSelectedClip: (clipId: string | null) => void;
 
   addEffect: (trackId: string, effect: Omit<Effect, 'id' | 'node'>) => void;
@@ -241,6 +242,44 @@ export const useStore = create<AppState>((set, get) => ({
           ? { ...t, clips: [...t.clips, duplicatedClip] }
           : t
       ),
+    }));
+  },
+
+  moveClipToTrack: (fromTrackId: string, toTrackId: string, clipId: string) => {
+    const state = get();
+    const fromTrack = state.tracks.find((t) => t.id === fromTrackId);
+    const toTrack = state.tracks.find((t) => t.id === toTrackId);
+
+    if (!fromTrack || !toTrack || fromTrackId === toTrackId) return;
+
+    const clip = fromTrack.clips.find((c) => c.id === clipId);
+    if (!clip) return;
+
+    // Remove clip from old track
+    if (clip.player) {
+      clip.player.dispose();
+    }
+
+    // Create new player if it's an audio clip
+    if (clip.buffer && toTrack.channel) {
+      const player = new Tone.Player(clip.buffer).connect(toTrack.channel);
+      player.sync().start(clip.startTime, clip.offset, clip.duration);
+      clip.player = player;
+    }
+
+    // Update trackId
+    clip.trackId = toTrackId;
+
+    set((state) => ({
+      tracks: state.tracks.map((t) => {
+        if (t.id === fromTrackId) {
+          return { ...t, clips: t.clips.filter((c) => c.id !== clipId) };
+        }
+        if (t.id === toTrackId) {
+          return { ...t, clips: [...t.clips, clip] };
+        }
+        return t;
+      }),
     }));
   },
 
