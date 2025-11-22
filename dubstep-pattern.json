@@ -1,0 +1,26 @@
+{
+  "projectName": "Dubstep Bass Pattern (Sail Style)",
+  "tempo": 140,
+  "stepSequencerPattern": [
+    [true, false, false, false, true, false, false, false, true, false, false, false, true, false, false, false],
+    [false, false, false, false, true, false, false, false, false, false, false, false, true, false, false, false],
+    [false, true, false, true, false, true, false, true, false, true, false, true, false, true, false, true],
+    [false, false, false, false, false, false, false, true, false, false, false, false, false, false, false, true],
+    [false, false, true, false, false, false, true, false, false, false, true, false, false, false, true, false],
+    [false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false],
+    [false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, true],
+    [false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false],
+    [false, false, false, false, false, false, false, false, true, false, false, false, false, false, false, false],
+    [false, false, false, false, false, false, true, false, false, false, false, false, false, false, true, false],
+    [false, false, true, false, false, false, false, false, false, false, true, false, false, false, false, false],
+    [false, false, false, false, false, true, false, false, false, false, false, false, false, true, false, false],
+    [false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false],
+    [false, false, false, true, false, false, false, true, false, false, false, true, false, false, false, true],
+    [false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false],
+    [false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false],
+    [false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false],
+    [false, false, false, false, true, false, false, false, false, false, false, false, true, false, false, false],
+    [false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false],
+    [true, false, false, false, true, false, false, false, true, false, false, false, true, false, false, false]
+  ]
+}
