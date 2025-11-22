@@ -76,6 +76,24 @@ class AudioEngine {
 
   async play(): Promise<void> {
     await this.init();
+
+    // Schedule all clips
+    this.tracks.forEach(track => {
+      track.clips.forEach(clip => {
+        if (clip.player && clip.buffer) {
+          // Stop and restart the player
+          clip.player.stop();
+          clip.player.start(clip.startTime, clip.offset, clip.duration);
+        }
+      });
+    });
+
+    // Calculate loop end based on content
+    const maxTime = this.calculateTotalDuration();
+    if (maxTime > 0) {
+      this.setLoop(true, 0, Math.max(8, Math.ceil(maxTime)));
+    }
+
     Tone.Transport.start();
   }
 
@@ -184,7 +202,8 @@ class AudioEngine {
     if (!track?.channel) return;
 
     const player = new Tone.Player(buffer).connect(track.channel);
-    player.sync().start(clip.startTime, clip.offset, clip.duration);
+    // Don't start immediately - will be started when play() is called
+    player.sync();
 
     clip.player = player;
     clip.buffer = buffer;

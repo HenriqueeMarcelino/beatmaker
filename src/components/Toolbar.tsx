@@ -48,30 +48,29 @@ export const Toolbar: React.FC = () => {
     setShowInstrumentPicker(true);
   };
 
-  const handleInstrumentSelect = (instrumentType: InstrumentType) => {
+  const handleInstrumentSelect = async (instrumentType: InstrumentType) => {
     const colors = ['#ef4444', '#f59e0b', '#10b981', '#3b82f6', '#8b5cf6', '#ec4899'];
-    const trackId = `track-${Date.now()}-${Math.random()}`;
+    const currentLength = tracks.length;
 
     addTrack({
-      name: `Instrument ${tracks.length + 1}`,
+      name: `Instrument ${currentLength + 1}`,
       type: 'instrument',
       volume: 0.8,
       pan: 0,
       muted: false,
       solo: false,
-      color: colors[tracks.length % colors.length],
+      color: colors[currentLength % colors.length],
     });
 
-    // Set instrument on the track we just created
-    // We use the generated trackId from zustand's internal logic
-    // by waiting and checking the last added track
-    setTimeout(() => {
-      const allTracks = useStore.getState().tracks;
-      if (allTracks.length > 0) {
-        const newTrack = allTracks[allTracks.length - 1];
-        setTrackInstrument(newTrack.id, instrumentType);
-      }
-    }, 100);
+    // Wait for React to update and get the new track
+    await new Promise(resolve => setTimeout(resolve, 50));
+
+    const allTracks = useStore.getState().tracks;
+    if (allTracks.length > currentLength) {
+      const newTrack = allTracks[allTracks.length - 1];
+      console.log('Setting instrument', instrumentType, 'on track', newTrack.id);
+      setTrackInstrument(newTrack.id, instrumentType);
+    }
   };
 
   const handleImportAudio = async (e: React.ChangeEvent<HTMLInputElement>) => {
