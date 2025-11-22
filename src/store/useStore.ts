@@ -1,0 +1,269 @@
+import { create } from 'zustand';
+import AudioEngine, { Track, Clip, Effect } from '../engine/AudioEngine';
+
+interface AppState {
+  // Playback
+  isPlaying: boolean;
+  tempo: number;
+  currentTime: number;
+
+  // Tracks
+  tracks: Track[];
+  selectedTrackId: string | null;
+
+  // UI
+  zoom: number;
+  viewMode: 'timeline' | 'piano-roll' | 'step-sequencer';
+  selectedClipId: string | null;
+
+  // Master
+  masterVolume: number;
+
+  // Actions
+  play: () => void;
+  pause: () => void;
+  stop: () => void;
+  setTempo: (tempo: number) => void;
+  setCurrentTime: (time: number) => void;
+
+  addTrack: (track: Omit<Track, 'id' | 'clips' | 'effects'>) => void;
+  removeTrack: (trackId: string) => void;
+  updateTrack: (trackId: string, updates: Partial<Track>) => void;
+  setSelectedTrack: (trackId: string | null) => void;
+
+  addClip: (trackId: string, clip: Omit<Clip, 'id'>, file?: File) => Promise<void>;
+  removeClip: (trackId: string, clipId: string) => void;
+  updateClip: (trackId: string, clipId: string, updates: Partial<Clip>) => void;
+  setSelectedClip: (clipId: string | null) => void;
+
+  addEffect: (trackId: string, effect: Omit<Effect, 'id' | 'node'>) => void;
+  removeEffect: (trackId: string, effectId: string) => void;
+  updateEffect: (trackId: string, effectId: string, updates: Partial<Effect>) => void;
+
+  setZoom: (zoom: number) => void;
+  setViewMode: (mode: 'timeline' | 'piano-roll' | 'step-sequencer') => void;
+  setMasterVolume: (volume: number) => void;
+
+  exportAudio: () => Promise<void>;
+}
+
+const audioEngine = AudioEngine.getInstance();
+
+export const useStore = create<AppState>((set, get) => ({
+  // Initial state
+  isPlaying: false,
+  tempo: 120,
+  currentTime: 0,
+  tracks: [],
+  selectedTrackId: null,
+  zoom: 1,
+  viewMode: 'timeline',
+  selectedClipId: null,
+  masterVolume: 0.8,
+
+  // Playback actions
+  play: async () => {
+    await audioEngine.init();
+    await audioEngine.play();
+    set({ isPlaying: true });
+  },
+
+  pause: () => {
+    audioEngine.pause();
+    set({ isPlaying: false });
+  },
+
+  stop: () => {
+    audioEngine.stop();
+    set({ isPlaying: false, currentTime: 0 });
+  },
+
+  setTempo: (tempo: number) => {
+    audioEngine.setTempo(tempo);
+    set({ tempo });
+  },
+
+  setCurrentTime: (time: number) => {
+    set({ currentTime: time });
+  },
+
+  // Track actions
+  addTrack: (trackData) => {
+    const track: Track = {
+      ...trackData,
+      id: `track-${Date.now()}-${Math.random()}`,
+      clips: [],
+      effects: [],
+    };
+
+    audioEngine.addTrack(track);
+    set((state) => ({
+      tracks: [...state.tracks, track],
+    }));
+  },
+
+  removeTrack: (trackId: string) => {
+    audioEngine.removeTrack(trackId);
+    set((state) => ({
+      tracks: state.tracks.filter((t) => t.id !== trackId),
+      selectedTrackId: state.selectedTrackId === trackId ? null : state.selectedTrackId,
+    }));
+  },
+
+  updateTrack: (trackId: string, updates: Partial<Track>) => {
+    set((state) => ({
+      tracks: state.tracks.map((t) =>
+        t.id === trackId ? { ...t, ...updates } : t
+      ),
+    }));
+
+    // Update audio engine
+    if ('volume' in updates && updates.volume !== undefined) {
+      audioEngine.setTrackVolume(trackId, updates.volume);
+    }
+    if ('pan' in updates && updates.pan !== undefined) {
+      audioEngine.setTrackPan(trackId, updates.pan);
+    }
+    if ('muted' in updates && updates.muted !== undefined) {
+      audioEngine.setTrackMute(trackId, updates.muted);
+    }
+    if ('solo' in updates && updates.solo !== undefined) {
+      audioEngine.setTrackSolo(trackId, updates.solo);
+    }
+  },
+
+  setSelectedTrack: (trackId: string | null) => {
+    set({ selectedTrackId: trackId });
+  },
+
+  // Clip actions
+  addClip: async (trackId: string, clipData, file?: File) => {
+    const clip: Clip = {
+      ...clipData,
+      id: `clip-${Date.now()}-${Math.random()}`,
+    };
+
+    if (file) {
+      const buffer = await audioEngine.loadAudioFile(file);
+      await audioEngine.addAudioClip(trackId, clip, buffer);
+    }
+
+    set((state) => ({
+      tracks: state.tracks.map((t) =>
+        t.id === trackId
+          ? { ...t, clips: [...t.clips, clip] }
+          : t
+      ),
+    }));
+  },
+
+  removeClip: (trackId: string, clipId: string) => {
+    audioEngine.removeClip(trackId, clipId);
+    set((state) => ({
+      tracks: state.tracks.map((t) =>
+        t.id === trackId
+          ? { ...t, clips: t.clips.filter((c) => c.id !== clipId) }
+          : t
+      ),
+      selectedClipId: state.selectedClipId === clipId ? null : state.selectedClipId,
+    }));
+  },
+
+  updateClip: (trackId: string, clipId: string, updates: Partial<Clip>) => {
+    set((state) => ({
+      tracks: state.tracks.map((t) =>
+        t.id === trackId
+          ? {
+              ...t,
+              clips: t.clips.map((c) =>
+                c.id === clipId ? { ...c, ...updates } : c
+              ),
+            }
+          : t
+      ),
+    }));
+  },
+
+  setSelectedClip: (clipId: string | null) => {
+    set({ selectedClipId: clipId });
+  },
+
+  // Effect actions
+  addEffect: (trackId: string, effectData) => {
+    const effect: Effect = {
+      ...effectData,
+      id: `effect-${Date.now()}-${Math.random()}`,
+    };
+
+    audioEngine.addEffect(trackId, effect);
+
+    set((state) => ({
+      tracks: state.tracks.map((t) =>
+        t.id === trackId
+          ? { ...t, effects: [...t.effects, effect] }
+          : t
+      ),
+    }));
+  },
+
+  removeEffect: (trackId: string, effectId: string) => {
+    audioEngine.removeEffect(trackId, effectId);
+    set((state) => ({
+      tracks: state.tracks.map((t) =>
+        t.id === trackId
+          ? { ...t, effects: t.effects.filter((e) => e.id !== effectId) }
+          : t
+      ),
+    }));
+  },
+
+  updateEffect: (trackId: string, effectId: string, updates: Partial<Effect>) => {
+    set((state) => ({
+      tracks: state.tracks.map((t) =>
+        t.id === trackId
+          ? {
+              ...t,
+              effects: t.effects.map((e) =>
+                e.id === effectId ? { ...e, ...updates } : e
+              ),
+            }
+          : t
+      ),
+    }));
+
+    // Update audio engine parameters
+    if (updates.params) {
+      Object.entries(updates.params).forEach(([param, value]) => {
+        audioEngine.updateEffectParam(trackId, effectId, param, value);
+      });
+    }
+  },
+
+  // UI actions
+  setZoom: (zoom: number) => {
+    set({ zoom });
+  },
+
+  setViewMode: (mode) => {
+    set({ viewMode: mode });
+  },
+
+  setMasterVolume: (volume: number) => {
+    audioEngine.setMasterVolume(volume);
+    set({ masterVolume: volume });
+  },
+
+  exportAudio: async () => {
+    try {
+      const blob = await audioEngine.exportAudio();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `beatmaker-export-${Date.now()}.wav`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Error exporting audio:', error);
+    }
+  },
+}));

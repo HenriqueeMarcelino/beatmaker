@@ -1,0 +1,35 @@
+{
+  "name": "beatmaker-web-daw",
+  "version": "1.0.0",
+  "description": "Web-based Digital Audio Workstation - Sistema de produção musical web inspirado em FL Studio, LMMS e Cakewalk",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "lint": "eslint .",
+    "type-check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "tone": "^15.0.4",
+    "wavesurfer.js": "^7.7.3",
+    "react-grid-layout": "^1.4.4",
+    "react-draggable": "^4.4.6",
+    "zustand": "^4.5.2",
+    "lucide-react": "^0.344.0",
+    "clsx": "^2.1.0"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.1",
+    "@types/react-dom": "^18.3.0",
+    "@vitejs/plugin-react": "^4.2.1",
+    "autoprefixer": "^10.4.18",
+    "postcss": "^8.4.35",
+    "tailwindcss": "^3.4.1",
+    "typescript": "^5.4.2",
+    "vite": "^5.1.6",
+    "eslint": "^8.57.0"
+  }
+}
