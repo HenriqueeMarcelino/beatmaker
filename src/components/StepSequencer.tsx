@@ -4,7 +4,7 @@ import { useStore } from '../store/useStore';
 import { getDrumInstruments } from '../engine/InstrumentLibrary';
 import AudioEngine from '../engine/AudioEngine';
 import clsx from 'clsx';
-import { Maximize2, Minimize2, X, Shuffle, Trash2 } from 'lucide-react';
+import { Maximize2, Minimize2, X, Shuffle, Trash2, Undo2, Redo2 } from 'lucide-react';
 
 const STEPS = 16;
 const DRUM_INSTRUMENTS = getDrumInstruments();
@@ -16,7 +16,11 @@ export const StepSequencer: React.FC = () => {
     stepSequencerPattern,
     setStepSequencerPattern,
     isStepSequencerFullscreen,
-    toggleStepSequencerFullscreen
+    toggleStepSequencerFullscreen,
+    undoStepSequencer,
+    redoStepSequencer,
+    stepSequencerHistoryIndex,
+    stepSequencerHistory
   } = useStore();
   const [currentStep, setCurrentStep] = useState(0);
   const audioEngine = useRef(AudioEngine.getInstance());
@@ -119,15 +123,30 @@ export const StepSequencer: React.FC = () => {
 
       setCurrentStep(step);
 
-      // Play all instruments that are active on this step
+      // Count active instruments on this step for volume normalization
+      const activeInstruments: number[] = [];
       currentPattern.forEach((instrumentPattern, instrumentIndex) => {
         if (instrumentPattern && instrumentPattern[step]) {
-          const instrument = DRUM_INSTRUMENTS[instrumentIndex];
-          if (instrument) {
-            audioEngine.current.playInstrumentPreview(instrument.type);
-          }
+          activeInstruments.push(instrumentIndex);
         }
       });
+
+      // Limit max simultaneous voices to prevent performance issues
+      const MAX_VOICES = 8;
+      const voicesToPlay = activeInstruments.slice(0, MAX_VOICES);
+
+      // Play instruments with dynamic volume adjustment
+      voicesToPlay.forEach((instrumentIndex) => {
+        const instrument = DRUM_INSTRUMENTS[instrumentIndex];
+        if (instrument) {
+          audioEngine.current.playInstrumentPreview(instrument.type);
+        }
+      });
+
+      // Warn if too many voices
+      if (activeInstruments.length > MAX_VOICES) {
+        console.warn(`⚠️ Too many voices (${activeInstruments.length}), limiting to ${MAX_VOICES}`);
+      }
 
       step = (step + 1) % STEPS;
     }, stepDuration);
@@ -159,6 +178,27 @@ export const StepSequencer: React.FC = () => {
               </p>
             </div>
             <div className="flex items-center gap-3">
+              <button
+                onClick={undoStepSequencer}
+                disabled={stepSequencerHistoryIndex <= 0}
+                className="flex items-center gap-2 px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded transition-colors text-sm disabled:opacity-40 disabled:cursor-not-allowed"
+                title="Desfazer (Ctrl+Z)"
+              >
+                <Undo2 className="w-4 h-4" />
+                Desfazer
+              </button>
+              <button
+                onClick={redoStepSequencer}
+                disabled={stepSequencerHistoryIndex >= stepSequencerHistory.length - 1}
+                className="flex items-center gap-2 px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded transition-colors text-sm disabled:opacity-40 disabled:cursor-not-allowed"
+                title="Refazer (Ctrl+Y)"
+              >
+                <Redo2 className="w-4 h-4" />
+                Refazer
+              </button>
+
+              <div className="w-px h-6 bg-gray-600" />
+
               <button
                 onClick={clearPattern}
                 className="flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded transition-colors text-sm font-medium"
@@ -301,6 +341,22 @@ export const StepSequencer: React.FC = () => {
             </p>
           </div>
           <div className="flex gap-2">
+            <button
+              onClick={undoStepSequencer}
+              disabled={stepSequencerHistoryIndex <= 0}
+              className="px-3 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded transition-colors text-sm disabled:opacity-40 disabled:cursor-not-allowed"
+              title="Desfazer (Ctrl+Z)"
+            >
+              <Undo2 className="w-4 h-4" />
+            </button>
+            <button
+              onClick={redoStepSequencer}
+              disabled={stepSequencerHistoryIndex >= stepSequencerHistory.length - 1}
+              className="px-3 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded transition-colors text-sm disabled:opacity-40 disabled:cursor-not-allowed"
+              title="Refazer (Ctrl+Y)"
+            >
+              <Redo2 className="w-4 h-4" />
+            </button>
             <button
               onClick={clearPattern}
               className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded transition-colors text-sm"

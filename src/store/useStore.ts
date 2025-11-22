@@ -19,6 +19,10 @@ interface AppState {
   // Step Sequencer
   stepSequencerPattern: boolean[][];
   setStepSequencerPattern: (pattern: boolean[][]) => void;
+  stepSequencerHistory: boolean[][][];
+  stepSequencerHistoryIndex: number;
+  undoStepSequencer: () => void;
+  redoStepSequencer: () => void;
 
   // UI
   zoom: number;
@@ -87,6 +91,8 @@ export const useStore = create<AppState>((set, get) => ({
   tracks: [],
   selectedTrackId: null,
   stepSequencerPattern: [],
+  stepSequencerHistory: [],
+  stepSequencerHistoryIndex: -1,
   zoom: 1,
   viewMode: 'timeline',
   selectedClipId: null,
@@ -466,7 +472,57 @@ export const useStore = create<AppState>((set, get) => ({
   },
 
   setStepSequencerPattern: (pattern: boolean[][]) => {
-    set({ stepSequencerPattern: pattern });
+    const state = get();
+    const MAX_HISTORY = 50; // Keep last 50 states
+
+    // Save current pattern to history before changing
+    if (state.stepSequencerPattern.length > 0) {
+      const newHistory = state.stepSequencerHistory.slice(0, state.stepSequencerHistoryIndex + 1);
+      newHistory.push(JSON.parse(JSON.stringify(state.stepSequencerPattern))); // Deep copy
+
+      // Limit history size
+      if (newHistory.length > MAX_HISTORY) {
+        newHistory.shift();
+      }
+
+      set({
+        stepSequencerPattern: pattern,
+        stepSequencerHistory: newHistory,
+        stepSequencerHistoryIndex: newHistory.length - 1
+      });
+    } else {
+      set({ stepSequencerPattern: pattern });
+    }
+  },
+
+  undoStepSequencer: () => {
+    const state = get();
+    if (state.stepSequencerHistoryIndex > 0) {
+      const newIndex = state.stepSequencerHistoryIndex - 1;
+      const previousPattern = state.stepSequencerHistory[newIndex];
+      set({
+        stepSequencerPattern: JSON.parse(JSON.stringify(previousPattern)),
+        stepSequencerHistoryIndex: newIndex
+      });
+      console.log('⏪ Undo Step Sequencer');
+    } else {
+      console.log('⏪ No more undo history');
+    }
+  },
+
+  redoStepSequencer: () => {
+    const state = get();
+    if (state.stepSequencerHistoryIndex < state.stepSequencerHistory.length - 1) {
+      const newIndex = state.stepSequencerHistoryIndex + 1;
+      const nextPattern = state.stepSequencerHistory[newIndex];
+      set({
+        stepSequencerPattern: JSON.parse(JSON.stringify(nextPattern)),
+        stepSequencerHistoryIndex: newIndex
+      });
+      console.log('⏩ Redo Step Sequencer');
+    } else {
+      console.log('⏩ No more redo history');
+    }
   },
 
   setMasterVolume: (volume: number) => {

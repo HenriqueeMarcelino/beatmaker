@@ -4,11 +4,27 @@ import { useStore } from '../store/useStore';
 export const useKeyboardShortcuts = () => {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      const { isPlaying, play, pause, saveProject, selectedClipId, tracks, removeClip, duplicateClip } = useStore.getState();
+      const { isPlaying, play, pause, saveProject, selectedClipId, tracks, removeClip, duplicateClip, viewMode, undoStepSequencer, redoStepSequencer } = useStore.getState();
 
       // Prevent shortcuts when typing in inputs
       const target = e.target as HTMLElement;
       if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') {
+        return;
+      }
+
+      // Ctrl/Cmd + Z: Undo (Step Sequencer only)
+      if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey && viewMode === 'step-sequencer') {
+        e.preventDefault();
+        undoStepSequencer();
+        console.log('⌨️ Ctrl+Z: Undo Step Sequencer');
+        return;
+      }
+
+      // Ctrl/Cmd + Shift + Z OR Ctrl/Cmd + Y: Redo (Step Sequencer only)
+      if ((e.ctrlKey || e.metaKey) && (e.key === 'y' || (e.key === 'z' && e.shiftKey)) && viewMode === 'step-sequencer') {
+        e.preventDefault();
+        redoStepSequencer();
+        console.log('⌨️ Ctrl+Y: Redo Step Sequencer');
         return;
       }
 
