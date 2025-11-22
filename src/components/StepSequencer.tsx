@@ -63,15 +63,19 @@ export const StepSequencer: React.FC = () => {
     audioEngine.current.playInstrumentPreview(instrument.type);
   };
 
+  // Use refs to avoid closure issues
+  const patternRef = useRef(pattern);
   useEffect(() => {
-    // Clear any existing sequence first
-    if (sequenceRef.current !== null) {
-      Tone.Transport.clear(sequenceRef.current);
-      sequenceRef.current = null;
-    }
+    patternRef.current = pattern;
+  }, [pattern]);
+
+  useEffect(() => {
+    // IMPORTANT: Clear ALL scheduled events to prevent ghost sounds
+    Tone.Transport.cancel(0);
+    sequenceRef.current = null;
+    setCurrentStep(0);
 
     if (!isPlaying) {
-      setCurrentStep(0);
       return;
     }
 
@@ -79,27 +83,39 @@ export const StepSequencer: React.FC = () => {
     const stepDuration = (60 / tempo) / 4; // 16th notes
 
     let step = 0;
+
+    // Create new sequence
     sequenceRef.current = Tone.Transport.scheduleRepeat((time) => {
+      // Use ref to get current pattern (avoid stale closure)
+      const currentPattern = patternRef.current;
+
       setCurrentStep(step);
 
       // Play all instruments that are active on this step
-      pattern.forEach((instrumentPattern, instrumentIndex) => {
-        if (instrumentPattern[step]) {
+      currentPattern.forEach((instrumentPattern, instrumentIndex) => {
+        if (instrumentPattern && instrumentPattern[step]) {
           const instrument = DRUM_INSTRUMENTS[instrumentIndex];
-          audioEngine.current.playInstrumentPreview(instrument.type);
+          if (instrument) {
+            audioEngine.current.playInstrumentPreview(instrument.type);
+          }
         }
       });
 
       step = (step + 1) % STEPS;
     }, stepDuration);
 
+    console.log('🎵 Step Sequencer: Scheduler created');
+
     return () => {
+      console.log('🧹 Step Sequencer: Cleaning up scheduler');
       if (sequenceRef.current !== null) {
         Tone.Transport.clear(sequenceRef.current);
         sequenceRef.current = null;
       }
+      // Extra safety: cancel all events
+      Tone.Transport.cancel(0);
     };
-  }, [isPlaying, pattern, tempo]);
+  }, [isPlaying, tempo]); // Note: pattern is NOT in deps, we use ref instead
 
   // Fullscreen mode
   if (isStepSequencerFullscreen) {
